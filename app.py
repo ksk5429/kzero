@@ -261,6 +261,7 @@ _sim_messages: list[dict[str, Any]] = []
 _sim_running = False
 _sim_done = False
 _sim_error = ""
+_sim_stop = False  # Flag to stop mid-deliberation
 
 
 def _run_council_thread(question: str, n_steps: int = 3):
@@ -272,11 +273,12 @@ def _run_council_thread(question: str, n_steps: int = 3):
 
     Messages are appended to _sim_messages in real-time for streaming.
     """
-    global _sim_messages, _sim_running, _sim_done, _sim_error
+    global _sim_messages, _sim_running, _sim_done, _sim_error, _sim_stop
     _sim_messages = []
     _sim_running = True
     _sim_done = False
     _sim_error = ""
+    _sim_stop = False
 
     try:
         from runner.agent import load_agents, _create_client
@@ -312,6 +314,8 @@ def _run_council_thread(question: str, n_steps: int = 3):
 
         def _agent_speak(name, topic, round_num, phase="", max_tok=100):
             """Speak with retry + rate limit backoff + pacing."""
+            if _sim_stop:
+                return
             agent = agents[name]
             for attempt in range(4):
                 try:
@@ -362,6 +366,9 @@ def _run_council_thread(question: str, n_steps: int = 3):
         ]
 
         for step in range(1, n_steps + 1):
+            if _sim_stop:
+                _add("[K-ZERO]", "Deliberation stopped by user.", round_counter, "moderator")
+                break
             random.shuffle(all_agents)
 
             # --- Step header ---
@@ -728,21 +735,30 @@ def build_app() -> Any:
                         id="run-btn",
                         n_clicks=0,
                         style={
-                            "width": "44px",
-                            "height": "44px",
-                            "fontSize": "1.1em",
-                            "fontWeight": "700",
-                            "backgroundColor": GOLD,
-                            "color": BG,
-                            "border": "none",
-                            "borderRadius": "50%",
-                            "cursor": "pointer",
-                            "fontFamily": "inherit",
-                            "flexShrink": "0",
-                            "display": "flex",
-                            "alignItems": "center",
+                            "width": "44px", "height": "44px",
+                            "fontSize": "1.1em", "fontWeight": "700",
+                            "backgroundColor": GOLD, "color": BG,
+                            "border": "none", "borderRadius": "50%",
+                            "cursor": "pointer", "flexShrink": "0",
+                            "display": "flex", "alignItems": "center",
                             "justifyContent": "center",
                         },
+                    ),
+                    # Stop / New Question button
+                    html.Button(
+                        "\u25A0",
+                        id="stop-btn",
+                        n_clicks=0,
+                        style={
+                            "width": "44px", "height": "44px",
+                            "fontSize": "1em", "fontWeight": "700",
+                            "backgroundColor": ACCENT_RED, "color": TEXT,
+                            "border": "none", "borderRadius": "50%",
+                            "cursor": "pointer", "flexShrink": "0",
+                            "display": "flex", "alignItems": "center",
+                            "justifyContent": "center",
+                        },
+                        title="Stop deliberation / New question",
                     ),
                 ], style={
                     "display": "flex",
@@ -877,10 +893,23 @@ def build_app() -> Any:
         Output("sim-poll", "disabled", allow_duplicate=True),
         Output("sim-status", "children", allow_duplicate=True),
         Input("sim-poll", "n_intervals"),
+        Input("stop-btn", "n_clicks"),
         State("sim-msg-count", "data"),
         prevent_initial_call=True,
     )
-    def poll_messages(n_intervals, last_count):
+    def poll_messages(n_intervals, stop_clicks, last_count):
+        global _sim_stop, _sim_running, _sim_done
+
+        # Handle stop button
+        ctx = callback_context
+        if ctx.triggered and ctx.triggered[0]["prop_id"] == "stop-btn.n_clicks":
+            if stop_clicks:
+                _sim_stop = True
+                _sim_running = False
+                _sim_done = True
+                return no_update, True, html.Div(
+                    "\u23F9 Stopped. Type a new question and press send.",
+                    style={"color": GOLD, "fontSize": "0.9em"})
         messages = list(_sim_messages)  # Copy to avoid race conditions
 
         if not messages and not _sim_done:
