@@ -311,16 +311,37 @@ def _run_council_thread(question: str, n_steps: int = 3):
             _sim_messages.append(entry)
 
         def _agent_speak(name, topic, round_num, phase="", max_tok=300):
+            """Speak with retry + rate limit backoff + pacing."""
             agent = agents[name]
-            try:
-                text = agent.respond(history, current_topic=topic, max_tokens=max_tok)
-                if text and not text.startswith("["):
-                    _add(name, text, round_num, phase=phase)
-                else:
-                    _add(name, f"[{name.split()[0]} could not formulate a response]",
-                         round_num, "system", phase)
-            except Exception as e:
-                _add(name, f"[Error: {str(e)[:100]}]", round_num, "system", phase)
+            for attempt in range(4):
+                try:
+                    text = agent.respond(history, current_topic=topic, max_tokens=max_tok)
+                    if text and not text.startswith("["):
+                        _add(name, text, round_num, phase=phase)
+                        time.sleep(2)  # Pace between agents (stay under 30 req/min)
+                        return
+                except Exception as e:
+                    err = str(e).lower()
+                    if ("429" in err or "rate" in err or "quota" in err) and attempt < 3:
+                        wait = 5 * (attempt + 1)  # 5s, 10s, 15s
+                        _sim_messages.append({
+                            "speaker": "[K-ZERO]",
+                            "text": f"Rate limit hit. Waiting {wait}s before {name.split()[0]} speaks...",
+                            "round": round_num, "type": "system", "phase": "",
+                        })
+                        time.sleep(wait)
+                        # Rotate API key if available
+                        try:
+                            from runner.agent import _rotate_client
+                            agent.client = _rotate_client()
+                        except Exception:
+                            pass
+                        continue
+                    else:
+                        _add(name, f"[Error: {str(e)[:100]}]", round_num, "system", phase)
+                        return
+            _add(name, f"[{name.split()[0]} could not respond after retries]",
+                 round_num, "system", phase)
 
         # ================================================================
         # MULTI-STEP HEGELIAN DIALECTIC
