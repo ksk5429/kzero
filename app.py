@@ -276,7 +276,7 @@ def build_app() -> Any:
         meta = analysis.get("metadata", {})
 
         return html.Div([
-            _build_hero(html, meta, prediction),
+            _build_hero(html, meta, prediction, transcript),
             _build_verdict(html, dcc, go, meta, analysis, prediction),
             _build_who_said_what(html, analysis),
             _build_clash_map(html, dcc, go, analysis),
@@ -317,9 +317,24 @@ def _build_empty_state(html: Any) -> Any:
     ], style=PAGE_STYLE)
 
 
-def _build_hero(html: Any, meta: dict, prediction: dict | None) -> Any:
+def _build_hero(html: Any, meta: dict, prediction: dict | None, transcript: list | None = None) -> Any:
     """Section 1: Full-bleed hero with title, question, and one-line verdict."""
+    # Use the actual opening question from transcript, not the slug title
     title = meta.get("scenario_title", "Untitled Deliberation")
+    if transcript:
+        for entry in transcript[:3]:
+            if entry.get("type") in ("moderator", "god_mode") and len(entry.get("text", "")) > 30:
+                # Use the opening prompt as the title — truncate to first sentence
+                opening = entry["text"]
+                # Find first question mark or period as natural break
+                for delim in ["?", ". "]:
+                    idx = opening.find(delim)
+                    if 20 < idx < 200:
+                        title = opening[:idx + 1]
+                        break
+                else:
+                    title = opening[:150]
+                break
 
     # Build verdict line
     verdict_text = ""
@@ -579,7 +594,9 @@ def _build_who_said_what(html: Any, analysis: dict) -> Any:
 
 
 def _build_clash_map(html: Any, dcc: Any, go: Any, analysis: dict) -> Any:
-    """Section 4: Agreement heatmap + clash/alliance callouts."""
+    """Section 4: Network graph + ranked relationship cards."""
+    import math
+
     am = analysis.get("agreement_matrix", {})
     labels = am.get("labels", [])
     matrix = am.get("matrix", [])
@@ -587,59 +604,78 @@ def _build_clash_map(html: Any, dcc: Any, go: Any, analysis: dict) -> Any:
     if not labels or not matrix:
         return html.Div()
 
-    # Short labels for display
     short = [n.split(" ")[0] if "(" not in n else n.split("(")[0].strip()
              for n in labels]
+    n = len(labels)
 
-    # Build heatmap
-    fig = go.Figure(data=go.Heatmap(
-        z=matrix,
-        x=short,
-        y=short,
-        colorscale=[
-            [0.0, ACCENT_RED],
-            [0.5, BG],
-            [1.0, ACCENT_GREEN],
-        ],
-        zmin=-1,
-        zmax=1,
-        text=[[f"{v:.1f}" for v in row] for row in matrix],
-        texttemplate="%{text}",
+    # --- Network Graph ---
+    # Arrange agents in a circle
+    positions = []
+    for i in range(n):
+        angle = 2 * math.pi * i / n - math.pi / 2
+        positions.append((math.cos(angle), math.sin(angle)))
+
+    fig = go.Figure()
+
+    # Draw edges (connections between agents)
+    all_pairs = []
+    for i in range(n):
+        for j in range(i + 1, n):
+            score = matrix[i][j]
+            if abs(score) < 0.05:
+                continue
+            all_pairs.append((i, j, score))
+
+            # Edge color and width
+            if score > 0.2:
+                color = ACCENT_GREEN
+                dash = "solid"
+            elif score < -0.2:
+                color = ACCENT_RED
+                dash = "solid"
+            else:
+                color = MUTED
+                dash = "dot"
+
+            width = max(1, abs(score) * 6)
+
+            fig.add_trace(go.Scatter(
+                x=[positions[i][0], positions[j][0]],
+                y=[positions[i][1], positions[j][1]],
+                mode="lines",
+                line={"color": color, "width": width, "dash": dash},
+                hoverinfo="text",
+                text=f"{short[i]} {'<->' if score > 0 else 'vs'} {short[j]}: {score:+.1f}",
+                showlegend=False,
+            ))
+
+    # Draw nodes (agents)
+    node_x = [p[0] for p in positions]
+    node_y = [p[1] for p in positions]
+    node_colors = [AGENT_COLORS.get(name, "#888") for name in labels]
+    node_text = [f"<b>{s}</b>" for s in short]
+
+    fig.add_trace(go.Scatter(
+        x=node_x, y=node_y,
+        mode="markers+text",
+        marker={"size": 40, "color": node_colors, "line": {"width": 2, "color": "#0d1117"}},
+        text=node_text,
+        textposition="top center",
         textfont={"size": 13, "color": TEXT},
-        hovertemplate="%{y} vs %{x}: %{z:.2f}<extra></extra>",
-        showscale=False,
+        hovertemplate="%{text}<extra></extra>",
+        showlegend=False,
     ))
 
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        margin={"l": 80, "r": 20, "t": 20, "b": 80},
-        height=380,
-        xaxis={
-            "tickfont": {"color": MUTED, "size": 12},
-            "side": "bottom",
-        },
-        yaxis={
-            "tickfont": {"color": MUTED, "size": 12},
-            "autorange": "reversed",
-        },
+        margin={"l": 20, "r": 20, "t": 10, "b": 10},
+        height=420,
+        xaxis={"visible": False, "range": [-1.5, 1.5]},
+        yaxis={"visible": False, "range": [-1.5, 1.5], "scaleanchor": "x"},
     )
 
-    # Find biggest clash and strongest alliance
-    min_score, max_score = 0.0, 0.0
-    clash_pair, alliance_pair = ("", ""), ("", "")
-
-    for i in range(len(labels)):
-        for j in range(i + 1, len(labels)):
-            v = matrix[i][j]
-            if v < min_score:
-                min_score = v
-                clash_pair = (labels[i], labels[j])
-            if v > max_score:
-                max_score = v
-                alliance_pair = (labels[i], labels[j])
-
-    # Get evidence from raw_pairwise
+    # --- Ranked Relationship Cards ---
     raw = am.get("raw_pairwise", {})
 
     def _find_evidence(a: str, b: str) -> str:
@@ -648,63 +684,68 @@ def _build_clash_map(html: Any, dcc: Any, go: Any, analysis: dict) -> Any:
                 return raw[key].get("evidence", "")
         return ""
 
-    callouts: list[Any] = []
-    if min_score < 0:
-        ev = _find_evidence(clash_pair[0], clash_pair[1])
-        callouts.append(html.Div([
-            html.Span("Biggest Clash", style={
-                "color": ACCENT_RED, "fontWeight": "700",
-                "fontSize": "0.9em", "textTransform": "uppercase",
-                "letterSpacing": "0.05em",
-            }),
-            html.Div(
-                f"{clash_pair[0].split(' ')[0]} vs "
-                f"{clash_pair[1].split(' ')[0]}  ({min_score:+.1f})",
-                style={"color": TEXT, "fontWeight": "600", "marginTop": "4px"},
-            ),
-            html.P(
-                f"\u201c{ev}\u201d" if ev else "",
-                style={
-                    "color": MUTED, "fontSize": "0.85em",
-                    "fontStyle": "italic", "marginTop": "8px",
-                },
-            ) if ev else html.Div(),
-        ], style=_card_style({"flex": "1", "borderTop": f"3px solid {ACCENT_RED}"})))
+    # Sort all pairs by score
+    sorted_pairs = sorted(all_pairs, key=lambda x: x[2])
 
-    if max_score > 0:
-        ev = _find_evidence(alliance_pair[0], alliance_pair[1])
-        callouts.append(html.Div([
-            html.Span("Strongest Alliance", style={
-                "color": ACCENT_GREEN, "fontWeight": "700",
-                "fontSize": "0.9em", "textTransform": "uppercase",
-                "letterSpacing": "0.05em",
-            }),
-            html.Div(
-                f"{alliance_pair[0].split(' ')[0]} + "
-                f"{alliance_pair[1].split(' ')[0]}  ({max_score:+.1f})",
-                style={"color": TEXT, "fontWeight": "600", "marginTop": "4px"},
-            ),
-            html.P(
-                f"\u201c{ev}\u201d" if ev else "",
-                style={
-                    "color": MUTED, "fontSize": "0.85em",
-                    "fontStyle": "italic", "marginTop": "8px",
-                },
-            ) if ev else html.Div(),
-        ], style=_card_style({"flex": "1", "borderTop": f"3px solid {ACCENT_GREEN}"})))
+    relationship_cards: list[Any] = []
+
+    # Top 3 clashes (most negative)
+    clashes = [p for p in sorted_pairs if p[2] < -0.1][:3]
+    for i_idx, j_idx, score in clashes:
+        ev = _find_evidence(labels[i_idx], labels[j_idx])
+        relationship_cards.append(html.Div([
+            html.Div(style={"display": "flex", "alignItems": "center", "gap": "12px"}, children=[
+                html.Span(f"{score:+.1f}", style={
+                    "color": ACCENT_RED, "fontWeight": "800", "fontSize": "1.5em",
+                    "minWidth": "55px",
+                }),
+                html.Div([
+                    html.Div(
+                        f"{short[i_idx]} vs {short[j_idx]}",
+                        style={"color": TEXT, "fontWeight": "600", "fontSize": "1.05em"},
+                    ),
+                    html.Div(
+                        f"\u201c{ev[:200]}\u201d" if ev else "",
+                        style={"color": MUTED, "fontSize": "0.85em", "fontStyle": "italic", "marginTop": "4px"},
+                    ),
+                ]),
+            ]),
+        ], style={**_card_style(), "borderLeft": f"4px solid {ACCENT_RED}", "marginBottom": "10px"}))
+
+    # Top 3 alliances (most positive)
+    alliances = [p for p in reversed(sorted_pairs) if p[2] > 0.1][:3]
+    for i_idx, j_idx, score in alliances:
+        ev = _find_evidence(labels[i_idx], labels[j_idx])
+        relationship_cards.append(html.Div([
+            html.Div(style={"display": "flex", "alignItems": "center", "gap": "12px"}, children=[
+                html.Span(f"{score:+.1f}", style={
+                    "color": ACCENT_GREEN, "fontWeight": "800", "fontSize": "1.5em",
+                    "minWidth": "55px",
+                }),
+                html.Div([
+                    html.Div(
+                        f"{short[i_idx]} + {short[j_idx]}",
+                        style={"color": TEXT, "fontWeight": "600", "fontSize": "1.05em"},
+                    ),
+                    html.Div(
+                        f"\u201c{ev[:200]}\u201d" if ev else "",
+                        style={"color": MUTED, "fontSize": "0.85em", "fontStyle": "italic", "marginTop": "4px"},
+                    ),
+                ]),
+            ]),
+        ], style={**_card_style(), "borderLeft": f"4px solid {ACCENT_GREEN}", "marginBottom": "10px"}))
 
     return html.Div([
-        html.H2("The Clash Map", style={
+        html.H2("Alliances & Conflicts", style={
             "color": TEXT, "fontSize": "1.6em",
             "fontWeight": "700", "marginBottom": "8px",
         }),
         html.P(
-            "Agreement and tension between council members. "
-            "Green means alignment, red means conflict.",
+            "Green lines = agreement. Red lines = conflict. Thicker = stronger.",
             style={"color": MUTED, "marginBottom": "24px", "fontSize": "0.95em"},
         ),
 
-        # Heatmap
+        # Network graph
         html.Div([
             dcc.Graph(
                 figure=fig,
@@ -713,19 +754,58 @@ def _build_clash_map(html: Any, dcc: Any, go: Any, analysis: dict) -> Any:
         ], style={
             **_card_style(),
             "padding": "16px",
-            "marginBottom": "20px",
+            "marginBottom": "24px",
         }),
 
-        # Clash / Alliance callouts
-        html.Div(
-            callouts,
-            style={
-                "display": "flex",
-                "gap": "16px",
-                "flexWrap": "wrap",
-            },
-        ),
+        # Relationship cards
+        html.Div(style={"display": "flex", "gap": "20px", "flexWrap": "wrap"}, children=[
+            # Clashes column
+            html.Div(style={"flex": "1", "minWidth": "280px"}, children=[
+                html.Div("CLASHES", style={
+                    "color": ACCENT_RED, "fontWeight": "700",
+                    "fontSize": "0.8em", "letterSpacing": "0.1em",
+                    "marginBottom": "12px",
+                }),
+                *[c for c in relationship_cards if ACCENT_RED in str(c)],
+            ]) if clashes else html.Div(),
+            # Alliances column
+            html.Div(style={"flex": "1", "minWidth": "280px"}, children=[
+                html.Div("ALLIANCES", style={
+                    "color": ACCENT_GREEN, "fontWeight": "700",
+                    "fontSize": "0.8em", "letterSpacing": "0.1em",
+                    "marginBottom": "12px",
+                }),
+                *[c for c in relationship_cards if ACCENT_GREEN in str(c)],
+            ]) if alliances else html.Div(),
+        ]),
     ], style=_section_style())
+
+
+def _build_clash_map_legacy(html: Any, dcc: Any, go: Any, analysis: dict) -> Any:
+    """LEGACY heatmap — kept for reference."""
+    return html.Div()  # Disabled — replaced by network graph
+
+
+# Keep the old callouts section for the return
+def _dummy_callouts():
+    """Legacy placeholder — unused."""
+    pass
+
+
+def _clean_truncated_text(text: str) -> str:
+    """Fix truncated LLM output — find the last complete sentence."""
+    if not text:
+        return text
+    text = text.strip()
+    # If it ends with proper punctuation, it's fine
+    if text and text[-1] in ".!?\"'":
+        return text
+    # Find last sentence-ending punctuation
+    for i in range(len(text) - 1, max(0, len(text) - 200), -1):
+        if text[i] in ".!?" and (i + 1 >= len(text) or text[i + 1] in " \n\"'"):
+            return text[:i + 1]
+    # No good break found — add ellipsis
+    return text.rstrip() + "..."
 
 
 def _build_conversation(html: Any, transcript: list[dict]) -> Any:
@@ -736,7 +816,7 @@ def _build_conversation(html: Any, transcript: list[dict]) -> Any:
     messages: list[Any] = []
     for msg in transcript:
         speaker = msg.get("speaker", "Unknown")
-        text = msg.get("text", "")
+        text = _clean_truncated_text(msg.get("text", ""))
         round_num = msg.get("round", 0)
         msg_type = msg.get("type", "agent")
 
@@ -916,22 +996,41 @@ def _build_emergent_insights(html: Any, analysis: dict) -> Any:
 
 
 def _build_footer(html: Any) -> Any:
-    """Section 7: Footer."""
+    """Section 7: Footer with GitHub link."""
     return html.Div([
         html.Hr(style={"border": "none", "borderTop": f"1px solid {BORDER}"}),
         html.Div([
             html.P([
                 "Powered by ",
                 html.Span("K-ZERO", style={"color": GOLD, "fontWeight": "600"}),
-            ], style={"margin": "0", "color": MUTED, "fontSize": "0.85em"}),
+                " \u2014 Multi-Agent Philosophical Deliberation System",
+            ], style={"margin": "0", "color": MUTED, "fontSize": "0.9em"}),
+            html.P([
+                html.A(
+                    "github.com/ksk5429/kzero",
+                    href="https://github.com/ksk5429/kzero",
+                    target="_blank",
+                    style={"color": GOLD, "textDecoration": "none"},
+                ),
+                "  \u2014  MIT License  \u2014  Free & Open Source",
+            ], style={
+                "margin": "10px 0 0", "color": MUTED, "fontSize": "0.85em",
+            }),
             html.P(
                 "Ask your own question:  python -m runner.demiurge",
                 style={
-                    "margin": "6px 0 0", "color": MUTED,
+                    "margin": "8px 0 0", "color": MUTED,
                     "fontSize": "0.8em", "fontFamily": "monospace",
                 },
             ),
-        ], style={"textAlign": "center", "padding": "32px 0"}),
+            html.P(
+                "The book is the translation layer between swarm intelligence and individual human understanding.",
+                style={
+                    "margin": "16px 0 0", "color": MUTED,
+                    "fontSize": "0.75em", "fontStyle": "italic", "opacity": "0.6",
+                },
+            ),
+        ], style={"textAlign": "center", "padding": "32px 0 48px"}),
     ], style={"marginTop": SECTION_GAP})
 
 
