@@ -21,7 +21,7 @@ Musk argues with Sartre about free will. Feynman calls bullshit on Johnson's imm
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 ![Cost](https://img.shields.io/badge/cost-%240-brightgreen?style=flat-square)
 [![Open in Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/)
-![Stars](https://img.shields.io/github/stars/YOUR_USERNAME/council-of-8?style=flat-square)
+![Stars](https://img.shields.io/github/stars/ksk5429/kzero?style=flat-square)
 
 <!-- TODO: Add demo GIF -->
 
@@ -50,8 +50,8 @@ No paid API keys. No cloud dependencies. Just pure intellectual chaos.
 **1. Clone**
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/council-of-8.git
-cd council-of-8
+git clone https://github.com/ksk5429/kzero.git
+cd kzero
 ```
 
 **2. Install**

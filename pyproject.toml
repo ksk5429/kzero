@@ -26,8 +26,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/kyeongsunkim/the-council"
-Repository = "https://github.com/kyeongsunkim/the-council"
+Homepage = "https://github.com/ksk5429/kzero"
+Repository = "https://github.com/ksk5429/kzero"
 
 [project.scripts]
 council = "runner.council_runner:main"
