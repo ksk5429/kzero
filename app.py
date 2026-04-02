@@ -516,6 +516,14 @@ def build_app() -> Any:
     box-shadow: 0 6px 30px rgba(243,156,18,0.5);
     transform: translateY(-1px);
 }
+@keyframes typing-dots {
+    0%, 80%, 100% { opacity: 0.3; }
+    40% { opacity: 1; }
+}
+.chat-scroll::-webkit-scrollbar { width: 6px; }
+.chat-scroll::-webkit-scrollbar-track { background: transparent; }
+.chat-scroll::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+.chat-scroll::-webkit-scrollbar-thumb:hover { background: #484f58; }
 </style>
 </head>
 <body>{%app_entry%}{%config%}{%scripts%}{%renderer%}</body>
@@ -577,137 +585,154 @@ def build_app() -> Any:
             "zIndex": "1000",
         }),
 
-        # ---- Ask the Council (interactive simulation) ----
+        # ---- Ask the Council (chat interface) ----
         html.Div([
             html.Div([
-                # Hero brand
+                # Chat header bar
                 html.Div([
-                    html.Span("K", style={"color": GOLD, "fontSize": "2.5em", "fontWeight": "900"}),
-                    html.Span("-ZERO", style={"color": TEXT, "fontSize": "2.5em", "fontWeight": "900"}),
-                ], style={"textAlign": "center", "marginBottom": "8px", "letterSpacing": "0.08em"}),
+                    html.Div([
+                        html.Span("K", style={"color": GOLD, "fontWeight": "800", "fontSize": "1.2em"}),
+                        html.Span("-ZERO", style={"color": TEXT, "fontWeight": "800", "fontSize": "1.2em"}),
+                        html.Span(" Council Chat", style={"color": MUTED, "fontWeight": "400",
+                                                          "fontSize": "0.9em", "marginLeft": "8px"}),
+                    ]),
+                    html.Div([
+                        html.Span("8 minds", style={"color": MUTED, "fontSize": "0.75em"}),
+                        html.Span(" \u00b7 ", style={"color": BORDER, "fontSize": "0.75em"}),
+                        html.Span("Hegelian dialectic", style={"color": MUTED, "fontSize": "0.75em"}),
+                    ]),
+                ], style={
+                    "backgroundColor": CARD,
+                    "borderBottom": f"1px solid {BORDER}",
+                    "padding": "12px 20px",
+                    "display": "flex",
+                    "alignItems": "center",
+                    "justifyContent": "space-between",
+                    "borderRadius": "12px 12px 0 0",
+                }),
 
-                html.P(
-                    "8 minds. 1 question. Infinite consequences.",
-                    style={"color": MUTED, "textAlign": "center", "fontSize": "1.05em",
-                           "margin": "0 0 32px", "letterSpacing": "0.02em"},
-                ),
-
-                # The big question input (textarea, not single line)
+                # Example question chips (above chat area)
                 html.Div([
-                    dcc.Textarea(
-                        id="question-input",
-                        placeholder=random.choice(PLACEHOLDER_QUESTIONS),
-                        style={
-                            "width": "100%",
-                            "minHeight": "80px",
-                            "padding": "18px 20px",
-                            "fontSize": "1.15em",
-                            "lineHeight": "1.5",
-                            "backgroundColor": "#0d1117",
-                            "color": TEXT,
-                            "border": f"2px solid {BORDER}",
-                            "borderRadius": "12px",
-                            "outline": "none",
-                            "fontFamily": "inherit",
-                            "resize": "vertical",
-                            "boxSizing": "border-box",
-                        },
-                    ),
-                ], style={"maxWidth": "680px", "margin": "0 auto"}),
-
-                # Example questions as clickable chips
-                html.Div([
-                    html.Span("Try: ", style={"color": MUTED, "fontSize": "0.82em", "marginRight": "8px"}),
+                    html.Span("Try: ", style={"color": MUTED, "fontSize": "0.75em", "marginRight": "6px"}),
                     *[html.Span(q, style={
-                        "backgroundColor": CARD, "color": MUTED,
-                        "padding": "5px 14px", "borderRadius": "20px",
-                        "fontSize": "0.78em", "cursor": "pointer",
+                        "backgroundColor": "rgba(48, 54, 61, 0.5)", "color": MUTED,
+                        "padding": "4px 12px", "borderRadius": "14px",
+                        "fontSize": "0.72em", "cursor": "pointer",
                         "border": f"1px solid {BORDER}",
-                        "display": "inline-block", "margin": "3px",
-                        "transition": "all 0.2s",
+                        "display": "inline-block", "margin": "2px",
                     }) for q in [
                         "What is the point of life?",
                         "Should AI replace human jobs?",
                         "Is death the enemy or the teacher?",
                         "Should I quit my PhD?",
                     ]],
-                ], style={"textAlign": "center", "marginTop": "14px", "maxWidth": "680px",
-                          "margin": "14px auto 0"}),
+                ], style={
+                    "padding": "10px 20px 6px",
+                    "backgroundColor": "rgba(22, 27, 34, 0.5)",
+                    "borderBottom": f"1px solid {BORDER}",
+                }),
 
-                # Evolution steps selector + CTA button
-                html.Div(style={"textAlign": "center", "marginTop": "24px",
-                                "display": "flex", "justifyContent": "center",
-                                "alignItems": "center", "gap": "16px"}, children=[
-                    html.Div(style={"display": "flex", "alignItems": "center", "gap": "8px"}, children=[
-                        html.Span("Steps:", style={"color": MUTED, "fontSize": "0.85em"}),
-                        dcc.Dropdown(
-                            id="step-selector",
-                            options=[
-                                {"label": "1 step (quick)", "value": 1},
-                                {"label": "2 steps", "value": 2},
-                                {"label": "3 steps (default)", "value": 3},
-                                {"label": "5 steps (deep)", "value": 5},
-                            ],
-                            value=3,
-                            clearable=False,
-                            style={
-                                "width": "160px", "backgroundColor": "#0d1117",
-                                "color": TEXT, "border": "none",
-                            },
-                        ),
-                    ]),
-                    html.Button([
-                        html.Span("\u26A1 ", style={"fontSize": "1.1em"}),
-                        html.Span("Ask the Council"),
-                    ],
-                        id="run-btn",
-                        n_clicks=0,
-                        style={
-                            "padding": "16px 48px",
-                            "fontSize": "1.1em",
-                            "fontWeight": "700",
-                            "backgroundColor": GOLD,
-                            "color": BG,
-                            "border": "none",
-                            "borderRadius": "30px",
-                            "cursor": "pointer",
-                            "fontFamily": "inherit",
-                            "letterSpacing": "0.02em",
-                            "boxShadow": f"0 4px 20px rgba(243, 156, 18, 0.3)",
-                        },
-                    ),
-                ]),
-
-                html.P(
-                    "Each step: THESIS \u2192 ANTITHESIS \u2192 SYNTHESIS \u2192 REVISION \u00b7 7 agents per round \u00b7 Positions evolve between steps",
-                    style={"color": MUTED, "textAlign": "center", "fontSize": "0.75em",
-                           "marginTop": "12px", "opacity": "0.6"},
-                ),
-
-                # No API key message
+                # No API key message (inside chat area)
                 html.Div(
                     "API key not configured. View pre-computed analyses below.",
                     id="no-api-key-msg",
                     style={
                         "color": ACCENT_RED,
-                        "fontSize": "0.85em",
-                        "marginTop": "12px",
+                        "fontSize": "0.82em",
+                        "padding": "8px 20px",
                         "textAlign": "center",
                         "display": "none" if LLM_API_KEY else "block",
                     },
                 ),
 
-                # Status area
-                # Status area
-                html.Div(id="sim-status", style={"marginTop": "24px", "textAlign": "center"}),
-
-                # Live chat area — messages appear one by one
-                html.Div(id="sim-results", style={
-                    "marginTop": "20px",
-                    "maxWidth": "750px",
-                    "margin": "20px auto 0",
-                    "maxHeight": "600px",
+                # Scrollable chat message area
+                html.Div(id="sim-results", className="chat-scroll", style={
+                    "height": "70vh",
+                    "maxHeight": "70vh",
                     "overflowY": "auto",
+                    "padding": "16px 20px",
+                    "backgroundColor": BG,
+                    "display": "flex",
+                    "flexDirection": "column",
+                }),
+
+                # Typing indicator / status bar
+                html.Div(id="sim-status", style={
+                    "padding": "8px 20px",
+                    "backgroundColor": CARD,
+                    "borderTop": f"1px solid {BORDER}",
+                    "minHeight": "20px",
+                }),
+
+                # Input bar at the BOTTOM (like WhatsApp/Discord)
+                html.Div([
+                    # Step selector (compact)
+                    dcc.Dropdown(
+                        id="step-selector",
+                        options=[
+                            {"label": "1", "value": 1},
+                            {"label": "2", "value": 2},
+                            {"label": "3", "value": 3},
+                            {"label": "5", "value": 5},
+                        ],
+                        value=3,
+                        clearable=False,
+                        placeholder="Steps",
+                        style={
+                            "width": "58px", "backgroundColor": BG,
+                            "color": TEXT, "border": "none",
+                            "fontSize": "0.85em", "flexShrink": "0",
+                        },
+                    ),
+                    # Single-line input
+                    dcc.Input(
+                        id="question-input",
+                        type="text",
+                        placeholder=random.choice(PLACEHOLDER_QUESTIONS),
+                        debounce=False,
+                        style={
+                            "flex": "1",
+                            "padding": "12px 16px",
+                            "fontSize": "0.95em",
+                            "backgroundColor": BG,
+                            "color": TEXT,
+                            "border": f"1px solid {BORDER}",
+                            "borderRadius": "8px",
+                            "outline": "none",
+                            "fontFamily": "inherit",
+                            "boxSizing": "border-box",
+                        },
+                    ),
+                    # Send button
+                    html.Button(
+                        "\u25B6",
+                        id="run-btn",
+                        n_clicks=0,
+                        style={
+                            "width": "44px",
+                            "height": "44px",
+                            "fontSize": "1.1em",
+                            "fontWeight": "700",
+                            "backgroundColor": GOLD,
+                            "color": BG,
+                            "border": "none",
+                            "borderRadius": "50%",
+                            "cursor": "pointer",
+                            "fontFamily": "inherit",
+                            "flexShrink": "0",
+                            "display": "flex",
+                            "alignItems": "center",
+                            "justifyContent": "center",
+                        },
+                    ),
+                ], style={
+                    "display": "flex",
+                    "alignItems": "center",
+                    "gap": "10px",
+                    "padding": "12px 16px",
+                    "backgroundColor": CARD,
+                    "borderTop": f"1px solid {BORDER}",
+                    "borderRadius": "0 0 12px 12px",
                 }),
 
                 # Polling interval (disabled by default, enabled during simulation)
@@ -717,12 +742,14 @@ def build_app() -> Any:
                 dcc.Store(id="sim-timestamp", data=0),
                 dcc.Store(id="sim-msg-count", data=0),
             ], style={
-                "maxWidth": "920px",
+                "maxWidth": "780px",
                 "margin": "0 auto",
-                "padding": "0 20px",
+                "border": f"1px solid {BORDER}",
+                "borderRadius": "12px",
+                "overflow": "hidden",
             }),
         ], style={
-            "padding": "48px 0 40px",
+            "padding": "24px 20px 32px",
             "borderBottom": f"1px solid {BORDER}",
             "background": f"linear-gradient(180deg, {CARD} 0%, {BG} 100%)",
         }),
@@ -812,11 +839,15 @@ def build_app() -> Any:
         t.start()
 
         return html.Div([
-            html.Span("The Council is deliberating... ",
-                      style={"color": GOLD, "fontWeight": "600"}),
-            html.Span("Messages will appear below as agents respond.",
-                      style={"color": MUTED, "fontSize": "0.9em"}),
-        ]), now, False, 0  # Enable polling
+            html.Span("\u2022 ", style={"color": GOLD, "animation": "typing-dots 1.4s infinite",
+                                        "fontSize": "1.4em", "lineHeight": "1"}),
+            html.Span("\u2022 ", style={"color": GOLD, "animation": "typing-dots 1.4s infinite 0.2s",
+                                        "fontSize": "1.4em", "lineHeight": "1"}),
+            html.Span("\u2022 ", style={"color": GOLD, "animation": "typing-dots 1.4s infinite 0.4s",
+                                        "fontSize": "1.4em", "lineHeight": "1"}),
+            html.Span(" The Council is assembling...",
+                      style={"color": MUTED, "fontSize": "0.82em", "marginLeft": "4px"}),
+        ], style={"display": "flex", "alignItems": "center"}), now, False, 0  # Enable polling
 
     # ------------------------------------------------------------------
     # Callback 2: POLL for new messages (runs every 2 seconds)
@@ -836,64 +867,131 @@ def build_app() -> Any:
         if not messages and not _sim_done:
             return no_update, no_update, no_update
 
-        # Build chat cards for ALL messages so far
+        # Build chat bubbles for ALL messages so far
         cards: list[Any] = []
         for msg in messages:
             speaker = msg["speaker"]
             text = _clean_truncated_text(msg["text"])
             round_num = msg["round"]
             msg_type = msg.get("type", "agent")
+            phase = msg.get("phase", "")
             color = _agent_color(speaker)
 
             if msg_type == "god_mode":
-                border_color = ACCENT_RED
-                name_style = {"color": ACCENT_RED, "fontWeight": "700", "fontSize": "1em"}
-                bg = "rgba(248, 81, 73, 0.08)"
-                display_name = "GOD"
-            elif msg_type == "moderator":
-                border_color = GOLD
-                name_style = {"color": GOLD, "fontWeight": "700", "fontSize": "1em"}
-                bg = "rgba(240, 192, 64, 0.05)"
-                display_name = speaker.replace("[", "").replace("]", "")
-            else:
-                border_color = color
-                name_style = {"color": color, "fontWeight": "700", "fontSize": "1.05em"}
-                bg = CARD
-                display_name = speaker
-
-            role = _agent_role(speaker) if msg_type == "agent" else ""
-
-            cards.append(html.Div([
-                html.Div(style={"display": "flex", "alignItems": "center", "gap": "8px",
-                                "marginBottom": "8px"}, children=[
-                    # Avatar circle
-                    html.Div(display_name[0] if display_name else "?", style={
-                        "width": "32px", "height": "32px", "borderRadius": "50%",
-                        "backgroundColor": border_color, "color": BG,
-                        "display": "flex", "alignItems": "center", "justifyContent": "center",
-                        "fontWeight": "700", "fontSize": "0.8em", "flexShrink": "0",
+                # GOD messages: centered, dramatic red accent
+                cards.append(html.Div([
+                    html.Div([
+                        html.Div("\u26A0", style={
+                            "width": "28px", "height": "28px", "borderRadius": "50%",
+                            "backgroundColor": ACCENT_RED, "color": "#fff",
+                            "display": "flex", "alignItems": "center", "justifyContent": "center",
+                            "fontWeight": "700", "fontSize": "0.75em", "margin": "0 auto 6px",
+                        }),
+                        html.Div("GOD MODE", style={
+                            "color": ACCENT_RED, "fontWeight": "700", "fontSize": "0.7em",
+                            "letterSpacing": "0.1em", "textAlign": "center", "marginBottom": "6px",
+                        }),
+                        html.P(text, style={
+                            "color": TEXT, "fontSize": "0.92em", "lineHeight": "1.5",
+                            "margin": "0", "textAlign": "center", "fontStyle": "italic",
+                        }),
+                    ], style={
+                        "backgroundColor": "rgba(248, 81, 73, 0.06)",
+                        "border": f"1px solid rgba(248, 81, 73, 0.25)",
+                        "borderRadius": "12px", "padding": "14px 20px",
+                        "maxWidth": "85%", "margin": "0 auto",
                     }),
-                    html.Span(display_name, style=name_style),
-                    html.Span(f" {role}", style={"color": MUTED, "fontSize": "0.8em"}) if role else html.Span(),
-                    html.Span(
-                        f"{msg.get('phase', '')} R{round_num}" if msg.get("phase") else f"R{round_num}",
-                        style={
-                            "color": GOLD if msg.get("phase") else MUTED,
-                            "fontSize": "0.7em", "marginLeft": "auto",
-                            "backgroundColor": "#0d1117", "padding": "2px 8px",
-                            "borderRadius": "4px", "fontWeight": "600",
-                        },
-                    ),
-                ]),
-                html.P(text, style={
-                    "color": TEXT, "fontSize": "0.9em", "lineHeight": "1.6",
-                    "margin": "0", "whiteSpace": "pre-wrap",
-                }),
-            ], style={
-                "backgroundColor": bg, "padding": "14px 16px",
-                "borderRadius": "8px", "borderLeft": f"3px solid {border_color}",
-                "marginBottom": "10px",
-            }))
+                    html.Div(f"R{round_num}", style={
+                        "color": MUTED, "fontSize": "0.65em", "textAlign": "center",
+                        "marginTop": "4px", "opacity": "0.6",
+                    }),
+                ], style={"marginBottom": "12px"}))
+
+            elif msg_type == "moderator":
+                # K-ZERO / Kevin moderator: gold accent, full-width
+                display_name = speaker.replace("[", "").replace("]", "")
+                cards.append(html.Div([
+                    html.Div([
+                        html.Div(display_name[0] if display_name else "K", style={
+                            "width": "28px", "height": "28px", "borderRadius": "50%",
+                            "backgroundColor": GOLD, "color": BG,
+                            "display": "inline-flex", "alignItems": "center", "justifyContent": "center",
+                            "fontWeight": "700", "fontSize": "0.75em", "marginRight": "8px",
+                            "verticalAlign": "middle",
+                        }),
+                        html.Span(display_name, style={
+                            "color": GOLD, "fontWeight": "700", "fontSize": "0.85em",
+                            "verticalAlign": "middle",
+                        }),
+                    ], style={"marginBottom": "6px"}),
+                    html.P(text, style={
+                        "color": TEXT, "fontSize": "0.88em", "lineHeight": "1.5",
+                        "margin": "0", "whiteSpace": "pre-wrap", "opacity": "0.9",
+                    }),
+                    html.Div(f"R{round_num}", style={
+                        "color": MUTED, "fontSize": "0.65em", "textAlign": "right",
+                        "marginTop": "6px", "opacity": "0.5",
+                    }),
+                ], style={
+                    "backgroundColor": "rgba(240, 192, 64, 0.04)",
+                    "borderLeft": f"3px solid {GOLD}",
+                    "borderRadius": "4px 12px 12px 4px",
+                    "padding": "12px 16px", "marginBottom": "12px",
+                }))
+
+            else:
+                # Agent messages: chat bubble style
+                display_name = speaker
+                role = _agent_role(speaker)
+                # Subtle tint of the agent's color for bubble background
+                bubble_bg = f"rgba({int(color[1:3], 16)}, {int(color[3:5], 16)}, {int(color[5:7], 16)}, 0.06)"
+
+                # Phase badge
+                phase_badge = html.Span(phase.split()[-1] if phase else "", style={
+                    "color": GOLD, "fontSize": "0.65em", "fontWeight": "600",
+                    "backgroundColor": "rgba(240, 192, 64, 0.12)",
+                    "padding": "2px 8px", "borderRadius": "10px",
+                    "marginLeft": "8px",
+                }) if phase else html.Span()
+
+                cards.append(html.Div([
+                    # Avatar + name row
+                    html.Div([
+                        html.Div(display_name[0] if display_name else "?", style={
+                            "width": "32px", "height": "32px", "borderRadius": "50%",
+                            "backgroundColor": color, "color": BG,
+                            "display": "flex", "alignItems": "center", "justifyContent": "center",
+                            "fontWeight": "700", "fontSize": "0.8em", "flexShrink": "0",
+                        }),
+                        html.Div([
+                            html.Span(display_name, style={
+                                "color": color, "fontWeight": "700", "fontSize": "0.9em",
+                            }),
+                            html.Span(f"  {role}", style={
+                                "color": MUTED, "fontSize": "0.72em",
+                            }),
+                            phase_badge,
+                        ]),
+                    ], style={"display": "flex", "alignItems": "center", "gap": "10px",
+                              "marginBottom": "6px"}),
+                    # Message bubble
+                    html.Div([
+                        html.P(text, style={
+                            "color": TEXT, "fontSize": "0.88em", "lineHeight": "1.55",
+                            "margin": "0", "whiteSpace": "pre-wrap",
+                        }),
+                        html.Div(f"R{round_num}", style={
+                            "color": MUTED, "fontSize": "0.6em", "textAlign": "right",
+                            "marginTop": "6px", "opacity": "0.5",
+                        }),
+                    ], style={
+                        "backgroundColor": bubble_bg,
+                        "borderLeft": f"2px solid {color}",
+                        "borderRadius": "4px 12px 12px 12px",
+                        "padding": "10px 14px",
+                        "marginLeft": "42px",
+                    }),
+                ], style={"marginBottom": "10px"}))
 
         # Status update
         if _sim_done:
@@ -902,41 +1000,54 @@ def build_app() -> Any:
             verdict = analysis["verdict"]
             verdict_color = ACCENT_GREEN if "FOR" in verdict else ACCENT_RED if "AGAINST" in verdict else GOLD
 
-            # Add verdict card at top
+            # Add verdict card at the END (bottom of chat, like a final system message)
             scores = analysis.get("scores", {})
             pills = [html.Span(f"{n.split()[0]}: {s:+.1f}", style={
                 "color": ACCENT_GREEN if s > 0.1 else ACCENT_RED if s < -0.1 else MUTED,
-                "fontSize": "0.8em", "padding": "3px 10px",
+                "fontSize": "0.72em", "padding": "3px 10px",
                 "border": f"1px solid {'#3fb950' if s > 0.1 else '#f85149' if s < -0.1 else MUTED}",
-                "borderRadius": "12px", "display": "inline-block", "margin": "3px",
+                "borderRadius": "12px", "display": "inline-block", "margin": "2px",
             }) for n, s in sorted(scores.items(), key=lambda x: x[1], reverse=True)]
 
             verdict_card = html.Div([
-                html.Div(f"VERDICT: The Council {verdict}", style={
-                    "color": verdict_color, "fontWeight": "700", "fontSize": "1.2em",
-                    "marginBottom": "10px",
+                html.Div(f"VERDICT: {verdict}", style={
+                    "color": verdict_color, "fontWeight": "700", "fontSize": "1em",
+                    "marginBottom": "8px",
                 }),
                 html.Div(pills),
             ], style={
-                **_card_style(), "borderTop": f"3px solid {verdict_color}",
-                "textAlign": "center", "marginBottom": "20px",
+                "backgroundColor": "rgba(240, 192, 64, 0.04)",
+                "border": f"1px solid {verdict_color}",
+                "borderRadius": "12px",
+                "textAlign": "center", "padding": "14px 16px",
+                "marginTop": "8px",
             })
 
             agent_count = len([m for m in messages if m.get("type") == "agent"])
-            status = html.Div(
-                f"Deliberation complete \u2014 {len(messages)} messages, {agent_count} agent responses.",
-                style={"color": ACCENT_GREEN, "fontSize": "0.9em"})
+            status = html.Div([
+                html.Span("\u2713 ", style={"color": ACCENT_GREEN, "fontWeight": "700"}),
+                html.Span(
+                    f"Deliberation complete \u2014 {len(messages)} messages, {agent_count} agent responses.",
+                    style={"color": ACCENT_GREEN, "fontSize": "0.82em"}),
+            ], style={"display": "flex", "alignItems": "center"})
 
-            return html.Div([verdict_card, *cards]), True, status
+            return html.Div([*cards, verdict_card]), True, status
 
-        # Still running — show progress
-        agent_count = len([m for m in messages if m.get("type") == "agent"])
+        # Still running — show typing indicator with last speaker context
+        agent_msgs = [m for m in messages if m.get("type") == "agent"]
+        last_speaker = agent_msgs[-1]["speaker"] if agent_msgs else "The Council"
         status = html.Div([
-            html.Span(f"\u23f3 {len(messages)} messages, {agent_count} agent responses so far... ",
-                      style={"color": GOLD}),
-            html.Span("Council is deliberating.",
-                      style={"color": MUTED, "fontSize": "0.9em"}),
-        ])
+            html.Span("\u2022 ", style={"color": GOLD, "animation": "typing-dots 1.4s infinite",
+                                        "fontSize": "1.4em", "lineHeight": "1"}),
+            html.Span("\u2022 ", style={"color": GOLD, "animation": "typing-dots 1.4s infinite 0.2s",
+                                        "fontSize": "1.4em", "lineHeight": "1"}),
+            html.Span("\u2022 ", style={"color": GOLD, "animation": "typing-dots 1.4s infinite 0.4s",
+                                        "fontSize": "1.4em", "lineHeight": "1"}),
+            html.Span(f" {last_speaker} is formulating a response...",
+                      style={"color": MUTED, "fontSize": "0.82em", "marginLeft": "4px"}),
+            html.Span(f"  ({len(messages)} messages)",
+                      style={"color": MUTED, "fontSize": "0.7em", "opacity": "0.5"}),
+        ], style={"display": "flex", "alignItems": "center"})
 
         return html.Div(cards), no_update, status
 
