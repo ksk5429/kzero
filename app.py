@@ -312,7 +312,7 @@ def build_app() -> Any:
         return html.Div([
             _build_hero(html, meta, prediction, transcript),
             _build_verdict(html, dcc, go, meta, analysis, prediction),
-            _build_who_said_what(html, analysis),
+            _build_who_said_what(html, analysis, transcript),
             _build_clash_map(html, dcc, go, analysis),
             _build_position_tracking(html, analysis),
             _build_topic_clusters(html, analysis),
@@ -551,61 +551,136 @@ def _build_verdict(
     )
 
 
-def _build_who_said_what(html: Any, analysis: dict) -> Any:
-    """Section 3: Pull-quote cards for each agent, alternating layout."""
+def _extract_best_sentences(text: str, max_sentences: int = 3) -> list[str]:
+    """Extract the best standalone sentences from agent text."""
+    text = text.strip()
+    # Split into sentences
+    sentences = []
+    current = ""
+    for char in text:
+        current += char
+        if char in ".!?" and len(current.strip()) > 20:
+            s = current.strip()
+            # Filter out meta-text, narration, and broken sentences
+            if not any(skip in s.lower() for skip in ["[", "*", "as i", "in my view", "i think that"]):
+                sentences.append(s)
+            current = ""
+    # Return the longest, most substantive sentences
+    sentences.sort(key=len, reverse=True)
+    return sentences[:max_sentences]
+
+
+def _build_who_said_what(html: Any, analysis: dict, transcript: list | None = None) -> Any:
+    """Section 3: Multiple quote cards per agent from both analysis and transcript."""
     key_quotes = analysis.get("key_quotes", {})
-    if not key_quotes:
+
+    # Also extract quotes directly from transcript for richer content
+    transcript_quotes: dict[str, list[dict]] = {}
+    if transcript:
+        for msg in transcript:
+            if msg.get("type") != "agent":
+                continue
+            speaker = msg.get("speaker", "")
+            text = _clean_truncated_text(msg.get("text", ""))
+            rnd = msg.get("round", 0)
+            if len(text) < 30:
+                continue
+
+            if speaker not in transcript_quotes:
+                transcript_quotes[speaker] = []
+
+            best = _extract_best_sentences(text, max_sentences=2)
+            for sentence in best:
+                transcript_quotes[speaker].append({"quote": sentence, "round": rnd})
+
+    # Merge: key_quotes (from analysis) + transcript quotes
+    all_agents = set(list(key_quotes.keys()) + list(transcript_quotes.keys()))
+
+    if not all_agents:
         return html.Div()
 
     cards: list[Any] = []
-    names = list(key_quotes.keys())
+    card_idx = 0
 
-    for i, (agent, qinfo) in enumerate(key_quotes.items()):
+    for agent in sorted(all_agents):
         color = _agent_color(agent)
         role = _agent_role(agent)
-        quote = qinfo.get("quote", "")
-        why = qinfo.get("why_it_matters", qinfo.get("why_impactful", ""))
-        round_num = qinfo.get("round", "?")
-        align_right = (i % 2 == 1)
+        quotes_for_agent: list[dict] = []
+
+        # Add key quote first (from analysis — highest quality)
+        if agent in key_quotes:
+            kq = key_quotes[agent]
+            quotes_for_agent.append({
+                "quote": _clean_truncated_text(kq.get("quote", "")),
+                "round": kq.get("round", "?"),
+                "why": kq.get("why_it_matters", kq.get("why_impactful", "")),
+                "is_key": True,
+            })
+
+        # Add transcript quotes (supplementary)
+        if agent in transcript_quotes:
+            seen_texts = {q["quote"][:50] for q in quotes_for_agent}
+            for tq in transcript_quotes[agent]:
+                if tq["quote"][:50] not in seen_texts and len(quotes_for_agent) < 4:
+                    quotes_for_agent.append({
+                        "quote": tq["quote"],
+                        "round": tq["round"],
+                        "why": "",
+                        "is_key": False,
+                    })
+                    seen_texts.add(tq["quote"][:50])
+
+        if not quotes_for_agent:
+            continue
+
+        # Build agent section
+        agent_quotes: list[Any] = []
+        for q in quotes_for_agent:
+            quote_text = q["quote"]
+            # Skip empty or very short quotes
+            if len(quote_text) < 15:
+                continue
+
+            quote_style = {
+                "fontSize": "1.1em" if q.get("is_key") else "0.95em",
+                "lineHeight": "1.6",
+                "color": TEXT,
+                "margin": "12px 0",
+                "padding": "0 0 0 16px",
+                "borderLeft": f"3px solid {color}",
+                "fontStyle": "italic",
+            }
+
+            agent_quotes.append(html.Div([
+                html.Blockquote(f"\u201c{quote_text}\u201d", style=quote_style),
+                html.Div(style={"display": "flex", "gap": "12px", "alignItems": "center"}, children=[
+                    html.Span(f"Round {q['round']}", style={
+                        "color": MUTED, "fontSize": "0.75em",
+                        "backgroundColor": CARD, "padding": "2px 8px",
+                        "borderRadius": "4px",
+                    }),
+                    html.Span(q["why"], style={
+                        "color": MUTED, "fontSize": "0.82em",
+                    }) if q.get("why") else html.Span(),
+                ]),
+            ]))
+
+        align_right = (card_idx % 2 == 1)
+        card_idx += 1
 
         card = html.Div([
-            # Agent name + role
             html.Div([
                 html.Span(agent, style={
-                    "color": color,
-                    "fontWeight": "700",
-                    "fontSize": "1.1em",
+                    "color": color, "fontWeight": "700", "fontSize": "1.1em",
                 }),
                 html.Span(f"  \u00b7  {role}", style={
-                    "color": MUTED,
-                    "fontSize": "0.85em",
+                    "color": MUTED, "fontSize": "0.85em",
                 }),
-                html.Span(f"  \u00b7  Round {round_num}", style={
-                    "color": MUTED,
-                    "fontSize": "0.8em",
+                html.Span(f"  \u00b7  {len(agent_quotes)} quotes", style={
+                    "color": MUTED, "fontSize": "0.8em",
                 }),
             ]),
-
-            # The quote (pull-quote style)
-            html.Blockquote(
-                f"\u201c{quote}\u201d",
-                style={
-                    "fontSize": "1.15em",
-                    "lineHeight": "1.6",
-                    "color": TEXT,
-                    "margin": "16px 0",
-                    "padding": "0 0 0 20px",
-                    "borderLeft": f"3px solid {color}",
-                    "fontStyle": "italic",
-                },
-            ),
-
-            # Why it matters
-            html.P(why, style={
-                "color": MUTED,
-                "fontSize": "0.88em",
-                "margin": "0",
-            }) if why else html.Div(),
+            *agent_quotes,
         ], style={
             **_card_style(),
             "marginBottom": "20px",
