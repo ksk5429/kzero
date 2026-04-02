@@ -250,20 +250,32 @@ def _score_position(text: str) -> float:
     return 0.0
 
 
-def _run_mini_council(question: str) -> dict:
-    """Run a FAST multi-agent deliberation (2 rounds, optimized for web).
+# ---------------------------------------------------------------------------
+# Streaming Council Simulation (background thread + polling)
+# ---------------------------------------------------------------------------
 
-    Agents see and respond to EACH OTHER, not just the question.
-    Designed to complete within 25 seconds on Groq (under HF timeout).
+import threading
 
-    Returns dict with 'responses' list and 'error' string (empty on success).
+# Shared state for streaming simulation
+_sim_messages: list[dict[str, Any]] = []
+_sim_running = False
+_sim_done = False
+_sim_error = ""
+
+
+def _run_council_thread(question: str):
+    """Run full council deliberation in a background thread.
+    Messages are appended to _sim_messages in real-time.
     """
-    from runner.agent import load_agents, _create_client
-
-    results: dict[str, Any] = {"responses": [], "error": ""}
+    global _sim_messages, _sim_running, _sim_done, _sim_error
+    _sim_messages = []
+    _sim_running = True
+    _sim_done = False
+    _sim_error = ""
 
     try:
-        # Override env for this run
+        from runner.agent import load_agents, _create_client
+
         original_env = {
             k: os.environ.get(k, "")
             for k in ("LLM_API_KEY", "LLM_BASE_URL", "COUNCIL_MODEL", "COUNCIL_MAX_TOKENS")
@@ -274,158 +286,113 @@ def _run_mini_council(question: str) -> dict:
             os.environ["LLM_BASE_URL"] = LLM_BASE_URL
         if COUNCIL_MODEL:
             os.environ["COUNCIL_MODEL"] = COUNCIL_MODEL
-        os.environ["COUNCIL_MAX_TOKENS"] = "250"  # Keep short for web speed
+        os.environ["COUNCIL_MAX_TOKENS"] = "350"
 
         client = _create_client()
         agents = load_agents(PROJECT_ROOT, client=client)
 
-        # Restore env
         for k, v in original_env.items():
             if v:
                 os.environ[k] = v
 
         agent_names = [n for n in agents.keys() if "Kevin" not in n]
-        conversation_history: list[dict[str, Any]] = []
+        history: list[dict[str, Any]] = []
 
-        # === ROUND 1: Moderator poses the question ===
-        opening = {
-            "speaker": "[MODERATOR]",
-            "text": (
-                f"Council members, the question before you is: \"{question}\"\n\n"
-                "Each of you will speak from your own philosophy. "
-                "Respond to the question AND to what others have said. "
-                "Challenge each other. Build on each other's ideas. "
-                "This is a deliberation, not a monologue."
-            ),
-            "round": 0,
-            "type": "moderator",
-        }
-        conversation_history.append(opening)
-        results["responses"].append(opening)
+        def _add(speaker, text, round_num, msg_type="agent"):
+            entry = {"speaker": speaker, "text": text, "round": round_num, "type": msg_type}
+            history.append(entry)
+            _sim_messages.append(entry)
 
-        # === ROUND 1: First 2 agents respond to the question ===
-        round1_speakers = random.sample(agent_names, 2)
-        for speaker_name in round1_speakers:
-            agent = agents[speaker_name]
+        def _agent_speak(name, topic, round_num, max_tok=350):
+            agent = agents[name]
             try:
-                response_text = agent.respond(
-                    conversation_history,
-                    current_topic=f"Respond to: \"{question}\"",
-                    max_tokens=500,
-                )
-                if not response_text or response_text.startswith("["):
-                    continue
-            except Exception:
-                continue
-
-            entry = {
-                "speaker": speaker_name,
-                "text": response_text,
-                "round": 1,
-                "type": "agent",
-            }
-            conversation_history.append(entry)
-            results["responses"].append(entry)
-
-        # === ROUND 2: Next 2 agents RESPOND TO round 1 speakers ===
-        remaining = [n for n in agent_names if n not in round1_speakers]
-        round2_speakers = random.sample(remaining, min(2, len(remaining)))
-
-        # Inject a moderator prompt that forces engagement
-        r1_names = " and ".join(s.split()[0] for s in round1_speakers)
-        mod_prompt = {
-            "speaker": "[MODERATOR]",
-            "text": f"{r1_names} have spoken. Do you agree or disagree? Challenge their positions.",
-            "round": 2,
-            "type": "moderator",
-        }
-        conversation_history.append(mod_prompt)
-        results["responses"].append(mod_prompt)
-
-        for speaker_name in round2_speakers:
-            agent = agents[speaker_name]
-            try:
-                response_text = agent.respond(
-                    conversation_history,
-                    current_topic=(
-                        f"The question is: \"{question}\". "
-                        f"{r1_names} have already spoken. "
-                        f"Respond to THEIR arguments specifically. "
-                        f"Name them. Agree or disagree with specific points they made."
-                    ),
-                    max_tokens=500,
-                )
-                if not response_text or response_text.startswith("["):
-                    continue
-            except Exception:
-                continue
-
-            entry = {
-                "speaker": speaker_name,
-                "text": response_text,
-                "round": 2,
-                "type": "agent",
-            }
-            conversation_history.append(entry)
-            results["responses"].append(entry)
-
-        # === ROUND 3: One more agent with a twist ===
-        spoken = set(round1_speakers + round2_speakers)
-        round3_pool = [n for n in agent_names if n not in spoken]
-        if round3_pool:
-            challenger = random.choice(round3_pool)
-            agent = agents[challenger]
-            try:
-                response_text = agent.respond(
-                    conversation_history,
-                    current_topic=(
-                        f"The question is: \"{question}\". "
-                        f"You've heard the others. Now assume the OPPOSITE of the majority view is true. "
-                        f"Play devil's advocate. Challenge the strongest argument you've heard."
-                    ),
-                    max_tokens=250,
-                )
-                if response_text and not response_text.startswith("["):
-                    entry = {
-                        "speaker": challenger,
-                        "text": response_text,
-                        "round": 3,
-                        "type": "agent",
-                    }
-                    conversation_history.append(entry)
-                    results["responses"].append(entry)
+                text = agent.respond(history, current_topic=topic, max_tokens=max_tok)
+                if text and not text.startswith("["):
+                    _add(name, text, round_num)
             except Exception:
                 pass
+
+        # === ROUND 0: Opening ===
+        _add("[MODERATOR]",
+             f"Council members, the question before you is: \"{question}\"\n\n"
+             "Speak from your own philosophy. Respond to others. Challenge. Build. Evolve.",
+             0, "moderator")
+
+        # === ROUND 1: First 2 agents state positions ===
+        r1 = random.sample(agent_names, 2)
+        for name in r1:
+            _agent_speak(name, f"Respond to: \"{question}\"", 1)
+
+        # === ROUND 2: 2 new agents challenge Round 1 ===
+        r1_names = " and ".join(s.split()[0] for s in r1)
+        _add("[MODERATOR]",
+             f"{r1_names} have spoken. Who agrees? Who disagrees? Challenge their positions.",
+             2, "moderator")
+
+        remaining = [n for n in agent_names if n not in r1]
+        r2 = random.sample(remaining, min(2, len(remaining)))
+        for name in r2:
+            _agent_speak(name,
+                f"The question: \"{question}\". {r1_names} have spoken. "
+                f"Respond to THEIR arguments. Name them. Agree or disagree specifically.", 2)
+
+        # === ROUND 3: Devil's advocate ===
+        spoken = set(r1 + r2)
+        pool3 = [n for n in agent_names if n not in spoken]
+        if pool3:
+            devil = random.choice(pool3)
+            _add("[GOD-MODE]",
+                 "TWIST: Assume the opposite of the majority view. Play devil's advocate.",
+                 3, "god_mode")
+            _agent_speak(devil,
+                f"The question: \"{question}\". The council has been debating. "
+                f"Challenge the STRONGEST argument you've heard. Name who said it.", 3)
+
+        # === ROUND 4: Rebuttal — Round 1 speakers respond to challengers ===
+        r2_names = " and ".join(s.split()[0] for s in r2)
+        _add("[MODERATOR]",
+             f"{r2_names} challenged your positions. {r1_names}, how do you respond?",
+             4, "moderator")
+        for name in r1:
+            _agent_speak(name,
+                f"The question: \"{question}\". Your earlier position was challenged by "
+                f"{r2_names}. Defend, revise, or evolve your position. "
+                f"Address their specific points.", 4)
+
+        # === ROUND 5: Final thoughts from anyone not yet heard ===
+        all_spoken = spoken | set(r1)
+        unheard = [n for n in agent_names if n not in all_spoken]
+        if unheard:
+            _add("[MODERATOR]",
+                 f"{'We have not heard from ' + ' and '.join(s.split()[0] for s in unheard)}. Your turn.",
+                 5, "moderator")
+            for name in unheard[:2]:
+                _agent_speak(name,
+                    f"The question: \"{question}\". The council has debated extensively. "
+                    f"Having listened to everyone, state YOUR position. "
+                    f"Reference the most compelling argument you heard.", 5)
 
         # === SYNTHESIS: Kevin wraps up ===
         kevin = agents.get("Kevin (\uae40\uacbd\uc120)")
         if kevin:
             try:
-                synthesis = kevin.respond(
-                    conversation_history,
+                synthesis = kevin.respond(history,
                     current_topic=(
                         "Synthesize the council's deliberation. "
-                        "Who agreed? Who clashed? What emerged that no one said individually? "
-                        "End with the ONE question this deliberation leaves unanswered."
-                    ),
-                    max_tokens=300,
-                )
+                        "Who agreed? Who clashed? What emerged that no single mind held? "
+                        "How did positions EVOLVE across rounds? "
+                        "End with the ONE question this deliberation leaves unanswered."),
+                    max_tokens=400)
                 if synthesis and not synthesis.startswith("["):
-                    entry = {
-                        "speaker": "Kevin (\uae40\uacbd\uc120)",
-                        "text": synthesis,
-                        "round": 4,
-                        "type": "moderator",
-                    }
-                    conversation_history.append(entry)
-                    results["responses"].append(entry)
+                    _add("Kevin (\uae40\uacbd\uc120)", synthesis, 6, "moderator")
             except Exception:
                 pass
 
     except Exception as e:
-        results["error"] = f"Simulation failed: {e}\n{traceback.format_exc()}"
+        _sim_error = str(e)
 
-    return results
+    _sim_running = False
+    _sim_done = True
 
 
 def _analyze_responses(responses: list[dict]) -> dict:
@@ -656,19 +623,24 @@ def build_app() -> Any:
                 ),
 
                 # Status area
+                # Status area
                 html.Div(id="sim-status", style={"marginTop": "24px", "textAlign": "center"}),
 
-                # Results area with Dash built-in loading spinner
-                dcc.Loading(
-                    id="sim-loading",
-                    type="circle",
-                    color=GOLD,
-                    children=html.Div(id="sim-results"),
-                    style={"marginTop": "24px"},
-                ),
+                # Live chat area — messages appear one by one
+                html.Div(id="sim-results", style={
+                    "marginTop": "20px",
+                    "maxWidth": "750px",
+                    "margin": "20px auto 0",
+                    "maxHeight": "600px",
+                    "overflowY": "auto",
+                }),
+
+                # Polling interval (disabled by default, enabled during simulation)
+                dcc.Interval(id="sim-poll", interval=2000, disabled=True),
 
                 # Hidden stores
                 dcc.Store(id="sim-timestamp", data=0),
+                dcc.Store(id="sim-msg-count", data=0),
             ], style={
                 "maxWidth": "920px",
                 "margin": "0 auto",
@@ -725,161 +697,166 @@ def build_app() -> Any:
         ], style=PAGE_STYLE)
 
     # ------------------------------------------------------------------
-    # Callback: "Ask the Council" simulation
+    # Callback 1: START simulation (launches background thread, instant return)
     # ------------------------------------------------------------------
 
     @app.callback(
-        Output("sim-results", "children"),
         Output("sim-status", "children"),
         Output("sim-timestamp", "data"),
+        Output("sim-poll", "disabled"),
+        Output("sim-msg-count", "data"),
         Input("run-btn", "n_clicks"),
         State("question-input", "value"),
         State("sim-timestamp", "data"),
         prevent_initial_call=True,
     )
-    def run_council_simulation(n_clicks: int, question: str | None, last_ts: float) -> tuple:
+    def start_simulation(n_clicks, question, last_ts):
+        global _sim_running
         if not n_clicks or not question or not question.strip():
-            return no_update, html.Div(
-                "Please type a question first.",
-                style={"color": ACCENT_RED, "fontSize": "0.9em"},
-            ), no_update
+            return html.Div("Please type a question first.",
+                           style={"color": ACCENT_RED, "fontSize": "0.9em"}), no_update, True, 0
 
-        # Rate limiting: 60 second cooldown
         now = time.time()
-        if last_ts and (now - last_ts) < 60:
-            remaining = int(60 - (now - last_ts))
-            return no_update, html.Div(
-                f"The Council needs time to deliberate. Try again in {remaining} seconds.",
-                style={"color": GOLD, "fontSize": "0.9em"},
-            ), no_update
+        if last_ts and (now - last_ts) < 30:
+            remaining = int(30 - (now - last_ts))
+            return html.Div(f"Try again in {remaining}s.",
+                           style={"color": GOLD, "fontSize": "0.9em"}), no_update, True, 0
 
-        # Check API key
         if not LLM_API_KEY:
-            return no_update, html.Div(
-                "API key not configured. Set LLM_API_KEY environment variable.",
-                style={"color": ACCENT_RED, "fontSize": "0.9em"},
-            ), no_update
+            return html.Div("No API key. Set LLM_API_KEY as HF Space secret.",
+                           style={"color": ACCENT_RED, "fontSize": "0.9em"}), no_update, True, 0
 
-        # Run simulation
-        result = _run_mini_council(question.strip())
+        if _sim_running:
+            return html.Div("Council is already deliberating...",
+                           style={"color": GOLD, "fontSize": "0.9em"}), no_update, False, 0
 
-        if result["error"]:
-            return html.Div(), html.Div(
-                f"Error: {result['error'][:200]}",
-                style={"color": ACCENT_RED, "fontSize": "0.85em", "whiteSpace": "pre-wrap"},
-            ), now
-
-        responses = result["responses"]
-        if not responses:
-            return html.Div(), html.Div(
-                "The Council could not generate responses. Check your API key and try again.",
-                style={"color": ACCENT_RED, "fontSize": "0.9em"},
-            ), now
-
-        # Build response cards
-        cards: list[Any] = []
-        for resp in responses:
-            speaker = resp["speaker"]
-            text = _clean_truncated_text(resp["text"])
-            round_num = resp["round"]
-            color = _agent_color(speaker)
-            role = _agent_role(speaker)
-
-            cards.append(html.Div([
-                # Header: name + role + round badge
-                html.Div([
-                    html.Span(speaker, style={
-                        "color": color, "fontWeight": "700", "fontSize": "1.05em",
-                    }),
-                    html.Span(f"  \u00b7  {role}", style={
-                        "color": MUTED, "fontSize": "0.82em",
-                    }),
-                    html.Span(f"R{round_num}", style={
-                        "color": MUTED, "fontSize": "0.72em",
-                        "backgroundColor": "#0d1117",
-                        "padding": "2px 8px", "borderRadius": "4px",
-                        "marginLeft": "auto",
-                    }),
-                ], style={
-                    "display": "flex", "alignItems": "center",
-                    "gap": "8px", "marginBottom": "10px",
-                }),
-                # Response text
-                html.P(text, style={
-                    "color": TEXT, "fontSize": "0.92em",
-                    "lineHeight": "1.65", "margin": "0",
-                    "whiteSpace": "pre-wrap",
-                }),
-            ], style={
-                **_card_style(),
-                "borderLeft": f"3px solid {color}",
-                "marginBottom": "12px",
-            }))
-
-        # Quick analysis
-        analysis = _analyze_responses(responses)
-        verdict = analysis["verdict"]
-        scores = analysis.get("scores", {})
-
-        verdict_color = (
-            ACCENT_GREEN if "FOR" in verdict
-            else ACCENT_RED if "AGAINST" in verdict
-            else GOLD
-        )
-
-        # Score pills for each agent
-        score_pills: list[Any] = []
-        for name, score in sorted(scores.items(), key=lambda x: x[1], reverse=True):
-            pill_color = ACCENT_GREEN if score > 0.1 else ACCENT_RED if score < -0.1 else MUTED
-            score_pills.append(html.Span(
-                f"{name.split()[0]}: {score:+.1f}",
-                style={
-                    "color": pill_color,
-                    "fontSize": "0.8em",
-                    "padding": "3px 10px",
-                    "border": f"1px solid {pill_color}",
-                    "borderRadius": "12px",
-                    "display": "inline-block",
-                    "marginRight": "6px",
-                    "marginBottom": "6px",
-                },
-            ))
-
-        # Verdict card
-        verdict_card = html.Div([
-            html.Div([
-                html.Span("VERDICT: ", style={
-                    "color": MUTED, "fontSize": "0.8em",
-                    "textTransform": "uppercase", "letterSpacing": "0.08em",
-                }),
-                html.Span(f"The Council {verdict}", style={
-                    "color": verdict_color, "fontWeight": "700",
-                    "fontSize": "1.2em",
-                }),
-            ], style={"marginBottom": "12px"}),
-            html.Div(score_pills),
-        ], style={
-            **_card_style(),
-            "borderTop": f"3px solid {verdict_color}",
-            "marginBottom": "24px",
-            "textAlign": "center",
-        })
+        # Launch simulation in background thread
+        t = threading.Thread(target=_run_council_thread, args=(question.strip(),), daemon=True)
+        t.start()
 
         return html.Div([
-            verdict_card,
-            html.H3("The Deliberation", style={
-                "color": TEXT, "fontSize": "1.3em",
-                "fontWeight": "700", "marginBottom": "4px",
-            }),
-            html.P(
-                f"{len([r for r in responses if r['type'] == 'agent'])} agent responses across 3 rounds of swarm intelligence",
-                style={"color": MUTED, "fontSize": "0.85em", "marginBottom": "20px"},
-            ),
-            *cards,
-        ], style={"marginTop": "24px", "maxWidth": "750px", "margin": "24px auto 0"}), html.Div(
-            f"Deliberation complete \u2014 {len(responses)} messages, including moderator prompts and god-mode injection.",
-            style={"color": ACCENT_GREEN, "fontSize": "0.9em"},
-        ), now
+            html.Span("The Council is deliberating... ",
+                      style={"color": GOLD, "fontWeight": "600"}),
+            html.Span("Messages will appear below as agents respond.",
+                      style={"color": MUTED, "fontSize": "0.9em"}),
+        ]), now, False, 0  # Enable polling
+
+    # ------------------------------------------------------------------
+    # Callback 2: POLL for new messages (runs every 2 seconds)
+    # ------------------------------------------------------------------
+
+    @app.callback(
+        Output("sim-results", "children"),
+        Output("sim-poll", "disabled", allow_duplicate=True),
+        Output("sim-status", "children", allow_duplicate=True),
+        Input("sim-poll", "n_intervals"),
+        State("sim-msg-count", "data"),
+        prevent_initial_call=True,
+    )
+    def poll_messages(n_intervals, last_count):
+        messages = list(_sim_messages)  # Copy to avoid race conditions
+
+        if not messages and not _sim_done:
+            return no_update, no_update, no_update
+
+        # Build chat cards for ALL messages so far
+        cards: list[Any] = []
+        for msg in messages:
+            speaker = msg["speaker"]
+            text = _clean_truncated_text(msg["text"])
+            round_num = msg["round"]
+            msg_type = msg.get("type", "agent")
+            color = _agent_color(speaker)
+
+            if msg_type == "god_mode":
+                border_color = ACCENT_RED
+                name_style = {"color": ACCENT_RED, "fontWeight": "700", "fontSize": "1em"}
+                bg = "rgba(248, 81, 73, 0.08)"
+                display_name = "GOD-MODE"
+            elif msg_type == "moderator":
+                border_color = GOLD
+                name_style = {"color": GOLD, "fontWeight": "700", "fontSize": "1em"}
+                bg = "rgba(240, 192, 64, 0.05)"
+                display_name = speaker.replace("[", "").replace("]", "")
+            else:
+                border_color = color
+                name_style = {"color": color, "fontWeight": "700", "fontSize": "1.05em"}
+                bg = CARD
+                display_name = speaker
+
+            role = _agent_role(speaker) if msg_type == "agent" else ""
+
+            cards.append(html.Div([
+                html.Div(style={"display": "flex", "alignItems": "center", "gap": "8px",
+                                "marginBottom": "8px"}, children=[
+                    # Avatar circle
+                    html.Div(display_name[0] if display_name else "?", style={
+                        "width": "32px", "height": "32px", "borderRadius": "50%",
+                        "backgroundColor": border_color, "color": BG,
+                        "display": "flex", "alignItems": "center", "justifyContent": "center",
+                        "fontWeight": "700", "fontSize": "0.8em", "flexShrink": "0",
+                    }),
+                    html.Span(display_name, style=name_style),
+                    html.Span(f" {role}", style={"color": MUTED, "fontSize": "0.8em"}) if role else html.Span(),
+                    html.Span(f"Round {round_num}", style={
+                        "color": MUTED, "fontSize": "0.7em", "marginLeft": "auto",
+                        "backgroundColor": "#0d1117", "padding": "2px 8px", "borderRadius": "4px",
+                    }),
+                ]),
+                html.P(text, style={
+                    "color": TEXT, "fontSize": "0.9em", "lineHeight": "1.6",
+                    "margin": "0", "whiteSpace": "pre-wrap",
+                }),
+            ], style={
+                "backgroundColor": bg, "padding": "14px 16px",
+                "borderRadius": "8px", "borderLeft": f"3px solid {border_color}",
+                "marginBottom": "10px",
+            }))
+
+        # Status update
+        if _sim_done:
+            # Simulation complete — show verdict + disable polling
+            analysis = _analyze_responses([m for m in messages if m.get("type") == "agent"])
+            verdict = analysis["verdict"]
+            verdict_color = ACCENT_GREEN if "FOR" in verdict else ACCENT_RED if "AGAINST" in verdict else GOLD
+
+            # Add verdict card at top
+            scores = analysis.get("scores", {})
+            pills = [html.Span(f"{n.split()[0]}: {s:+.1f}", style={
+                "color": ACCENT_GREEN if s > 0.1 else ACCENT_RED if s < -0.1 else MUTED,
+                "fontSize": "0.8em", "padding": "3px 10px",
+                "border": f"1px solid {'#3fb950' if s > 0.1 else '#f85149' if s < -0.1 else MUTED}",
+                "borderRadius": "12px", "display": "inline-block", "margin": "3px",
+            }) for n, s in sorted(scores.items(), key=lambda x: x[1], reverse=True)]
+
+            verdict_card = html.Div([
+                html.Div(f"VERDICT: The Council {verdict}", style={
+                    "color": verdict_color, "fontWeight": "700", "fontSize": "1.2em",
+                    "marginBottom": "10px",
+                }),
+                html.Div(pills),
+            ], style={
+                **_card_style(), "borderTop": f"3px solid {verdict_color}",
+                "textAlign": "center", "marginBottom": "20px",
+            })
+
+            agent_count = len([m for m in messages if m.get("type") == "agent"])
+            status = html.Div(
+                f"Deliberation complete \u2014 {len(messages)} messages, {agent_count} agent responses.",
+                style={"color": ACCENT_GREEN, "fontSize": "0.9em"})
+
+            return html.Div([verdict_card, *cards]), True, status
+
+        # Still running — show progress
+        agent_count = len([m for m in messages if m.get("type") == "agent"])
+        status = html.Div([
+            html.Span(f"\u23f3 {len(messages)} messages, {agent_count} agent responses so far... ",
+                      style={"color": GOLD}),
+            html.Span("Council is deliberating.",
+                      style={"color": MUTED, "fontSize": "0.9em"}),
+        ])
+
+        return html.Div(cards), no_update, status
 
     return app
 
