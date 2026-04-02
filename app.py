@@ -291,7 +291,7 @@ def _run_council_thread(question: str, n_steps: int = 3):
             os.environ["LLM_BASE_URL"] = LLM_BASE_URL
         if COUNCIL_MODEL:
             os.environ["COUNCIL_MODEL"] = COUNCIL_MODEL
-        os.environ["COUNCIL_MAX_TOKENS"] = "350"
+        os.environ["COUNCIL_MAX_TOKENS"] = "120"
 
         client = _create_client()
         agents = load_agents(PROJECT_ROOT, client=client)
@@ -310,7 +310,7 @@ def _run_council_thread(question: str, n_steps: int = 3):
             history.append(entry)
             _sim_messages.append(entry)
 
-        def _agent_speak(name, topic, round_num, phase="", max_tok=300):
+        def _agent_speak(name, topic, round_num, phase="", max_tok=100):
             """Speak with retry + rate limit backoff + pacing."""
             agent = agents[name]
             for attempt in range(4):
@@ -390,8 +390,8 @@ def _run_council_thread(question: str, n_steps: int = 3):
                 prev = positions.get(name, "")
                 ctx = f" Your position last step: \"{prev[:120]}\"." if prev else ""
                 _agent_speak(name,
-                    f"Question: \"{question}\".{ctx} State your current position.",
-                    round_counter, thesis_label, max_tok=200)
+                    f"Question: \"{question}\".{ctx} State your position in 2 sentences MAX.",
+                    round_counter, thesis_label, max_tok=100)
 
             # --- ANTITHESIS: ALL agents ---
             round_counter += 1
@@ -404,8 +404,8 @@ def _run_council_thread(question: str, n_steps: int = 3):
             for name in all_agents:
                 _agent_speak(name,
                     f"Question: \"{question}\". "
-                    f"Which argument is weakest? Name the person. Dismantle it.",
-                    round_counter, anti_label, max_tok=200)
+                    f"Name the weakest argument and who said it. 2 sentences MAX.",
+                    round_counter, anti_label, max_tok=100)
 
             # --- SYNTHESIS: ALL agents ---
             round_counter += 1
@@ -418,8 +418,8 @@ def _run_council_thread(question: str, n_steps: int = 3):
             for name in all_agents:
                 _agent_speak(name,
                     f"Question: \"{question}\". "
-                    f"Reflect on the tension between your view and the strongest challenge.",
-                    round_counter, synth_label, max_tok=200)
+                    f"What tension exists between your view and the best counter-argument? 2 sentences.",
+                    round_counter, synth_label, max_tok=100)
 
             # --- GOD twist (every step) ---
             round_counter += 1
@@ -440,8 +440,8 @@ def _run_council_thread(question: str, n_steps: int = 3):
                 ctx = f" Previous: \"{prev[:120]}\"." if prev else ""
                 _agent_speak(name,
                     f"Question: \"{question}\".{ctx} "
-                    f"State your REVISED position. If changed, explain why.",
-                    round_counter, rev_label, max_tok=200)
+                    f"Revised position in 2 sentences. Changed or held firm?",
+                    round_counter, rev_label, max_tok=100)
 
             # Extract positions for next step
             for msg in _sim_messages:
@@ -454,12 +454,10 @@ def _run_council_thread(question: str, n_steps: int = 3):
             try:
                 synthesis = kevin.respond(history,
                     current_topic=(
-                        f"Synthesize the FULL {n_steps}-step evolution. "
-                        f"How did each mind change from Step 1 to Step {n_steps}? "
-                        f"Who evolved the most? Who held firm? "
-                        f"What truth emerged that did NOT exist at the start? "
-                        f"End with the ONE question the council cannot answer."),
-                    max_tokens=500)
+                        f"In 4-5 sentences: Who evolved? Who held firm? "
+                        f"What emerged that no one held at the start? "
+                        f"End with ONE unanswered question."),
+                    max_tokens=200)
                 if synthesis and not synthesis.startswith("["):
                     _add("Kevin (\uae40\uacbd\uc120)", synthesis, round_counter + 1,
                          "moderator", "FINAL SYNTHESIS")
