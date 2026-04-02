@@ -1126,30 +1126,62 @@ def _build_topic_clusters(html: Any, analysis: dict) -> Any:
 
 
 def _build_pipeline_info(html: Any) -> Any:
-    """Section: Show the full K-ZERO pipeline."""
+    """Section: Show the full K-ZERO pipeline with commands."""
     steps = [
-        ("Simulation", "8 agents debate across N rounds", "transcript.json"),
-        ("Analysis", "LLM extracts positions, clashes, insights", "analysis.json"),
-        ("Prediction", "Run 1000x, probability distribution", "prediction.json"),
-        ("Report", "Quarto book: HTML, PDF, DOCX", "report.pdf"),
-        ("Podcast", "NotebookLM Audio Overview", "podcast.mp3"),
-        ("Study Guide", "Structured learning material", "study_guide.md"),
-        ("Quiz + Cards", "Test your understanding", "quiz.json"),
+        ("1. Simulate", "8 agents debate across N rounds",
+         "python -m runner.council_runner --rounds 5",
+         "Available: 3 sample transcripts included in this demo"),
+        ("2. Analyze", "LLM extracts positions, clashes, insights",
+         "python -m runner.analyze transcripts/*.json",
+         "Available: analysis data powering this page"),
+        ("3. Predict", "Run 1000x, get probability distribution",
+         "python -m runner.predict \"Your question\" --runs 100",
+         "Classifies questions as CONVERGENT / CONTESTED / OPEN"),
+        ("4. Report", "Quarto book with embedded charts",
+         "python -m runner.report predictions/*.json --format pdf",
+         "Generates HTML, PDF, or DOCX via Quarto"),
+        ("5. Artifacts", "NotebookLM: podcast, quiz, study guide",
+         "python -m runner.artifacts reports/*.pdf --all",
+         "7 learning materials from one report"),
+        ("6. Dialectic", "Hegelian thesis/antithesis/synthesis",
+         "python -m runner.dialectic \"Your question\" --rounds 5",
+         "Agents explicitly revise positions each round"),
+        ("7. Share", "Auto-format for Twitter/X",
+         "python -m runner.thread transcripts/*.json",
+         "280-char tweets with key quotes and clashes"),
     ]
-    cards = [html.Div([
-        html.Div(title, style={"color": GOLD, "fontWeight": "700", "fontSize": "1em", "marginBottom": "4px"}),
-        html.P(desc, style={"color": MUTED, "fontSize": "0.8em", "margin": "0 0 6px"}),
-        html.Code(output, style={"color": TEXT, "fontSize": "0.75em", "opacity": "0.5"}),
-    ], style={**_card_style(), "padding": "14px 16px"}) for title, desc, output in steps]
+
+    cards = []
+    for title, desc, cmd, note in steps:
+        cards.append(html.Div([
+            html.Div(title, style={"color": GOLD, "fontWeight": "700", "fontSize": "1.05em",
+                                    "marginBottom": "6px"}),
+            html.P(desc, style={"color": TEXT, "fontSize": "0.85em", "margin": "0 0 8px"}),
+            html.Code(cmd, style={
+                "display": "block", "backgroundColor": "#0d1117",
+                "color": "#7ee787", "padding": "8px 10px", "borderRadius": "4px",
+                "fontSize": "0.78em", "marginBottom": "8px", "overflowX": "auto",
+            }),
+            html.Div(note, style={"color": MUTED, "fontSize": "0.75em", "fontStyle": "italic"}),
+        ], style={**_card_style(), "padding": "16px"}))
 
     return html.Div([
         html.H2("The K-ZERO Pipeline", style={
             "color": TEXT, "fontSize": "1.6em", "fontWeight": "700", "marginBottom": "8px"}),
-        html.P("One question produces seven artifacts.",
+        html.P("One question in. Seven artifacts out. Each command runs locally for free.",
                style={"color": MUTED, "marginBottom": "20px", "fontSize": "0.95em"}),
         html.Div(cards, style={"display": "grid",
-                                "gridTemplateColumns": "repeat(auto-fill, minmax(200px, 1fr))",
+                                "gridTemplateColumns": "repeat(auto-fill, minmax(280px, 1fr))",
                                 "gap": "12px"}),
+        html.Div([
+            html.P([
+                "Get started: ",
+                html.Code("pip install the-council", style={"color": "#7ee787"}),
+                " or ",
+                html.A("clone from GitHub", href="https://github.com/ksk5429/kzero",
+                       target="_blank", style={"color": GOLD}),
+            ], style={"color": MUTED, "fontSize": "0.9em", "textAlign": "center", "marginTop": "20px"}),
+        ]),
     ], style=_section_style())
 
 
