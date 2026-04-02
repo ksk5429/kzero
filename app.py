@@ -744,21 +744,19 @@ def build_app() -> Any:
                             "justifyContent": "center",
                         },
                     ),
-                    # Stop / New Question button
+                    # Stop / Reset button
                     html.Button(
-                        "\u25A0",
+                        "\u25A0 Stop",
                         id="stop-btn",
                         n_clicks=0,
                         style={
-                            "width": "44px", "height": "44px",
-                            "fontSize": "1em", "fontWeight": "700",
-                            "backgroundColor": ACCENT_RED, "color": TEXT,
-                            "border": "none", "borderRadius": "50%",
+                            "padding": "10px 18px",
+                            "fontSize": "0.9em", "fontWeight": "700",
+                            "backgroundColor": ACCENT_RED, "color": "#fff",
+                            "border": "none", "borderRadius": "22px",
                             "cursor": "pointer", "flexShrink": "0",
-                            "display": "flex", "alignItems": "center",
-                            "justifyContent": "center",
+                            "whiteSpace": "nowrap",
                         },
-                        title="Stop deliberation / New question",
                     ),
                 ], style={
                     "display": "flex",
