@@ -27,6 +27,8 @@ from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 
+from notebooklm import AudioFormat, ReportFormat, QuizDifficulty, QuizQuantity
+
 console = Console(width=100)
 
 
@@ -121,7 +123,7 @@ async def generate_artifacts(
                     status = await client.artifacts.generate_audio(
                         notebook_id,
                         instructions="This is a K-ZERO deliberation report where 8 brilliant minds debated a question. Make the podcast engaging and highlight the key clashes and the divine recommendation at the end.",
-                        audio_format="deep-dive",
+                        audio_format=AudioFormat.DEEP_DIVE,
                     )
                     await client.artifacts.wait_for_completion(notebook_id, status.task_id)
                     audio_path = out / "podcast.mp3"
@@ -136,7 +138,7 @@ async def generate_artifacts(
                 try:
                     status = await client.artifacts.generate_report(
                         notebook_id,
-                        report_format="study-guide",
+                        report_format=ReportFormat.STUDY_GUIDE,
                     )
                     await client.artifacts.wait_for_completion(notebook_id, status.task_id)
                     guide_path = out / "study_guide.md"
@@ -151,8 +153,8 @@ async def generate_artifacts(
                 try:
                     status = await client.artifacts.generate_quiz(
                         notebook_id,
-                        difficulty="hard",
-                        quantity="more",
+                        difficulty=QuizDifficulty.HARD,
+                        quantity=QuizQuantity.STANDARD,
                     )
                     await client.artifacts.wait_for_completion(notebook_id, status.task_id)
                     quiz_path = out / "quiz.json"
@@ -167,7 +169,7 @@ async def generate_artifacts(
                 try:
                     status = await client.artifacts.generate_flashcards(
                         notebook_id,
-                        quantity="more",
+                        quantity=QuizQuantity.STANDARD,
                     )
                     await client.artifacts.wait_for_completion(notebook_id, status.task_id)
                     cards_path = out / "flashcards.json"
@@ -194,8 +196,9 @@ async def generate_artifacts(
             if mind_map:
                 console.print("  Generating mind map...")
                 try:
-                    status = await client.artifacts.generate_mind_map(notebook_id)
-                    await client.artifacts.wait_for_completion(notebook_id, status.task_id)
+                    result = await client.artifacts.generate_mind_map(notebook_id)
+                    if hasattr(result, 'task_id'):
+                        await client.artifacts.wait_for_completion(notebook_id, result.task_id)
                     map_path = out / "mind_map.json"
                     await client.artifacts.download_mind_map(notebook_id, str(map_path))
                     results["mind_map"] = str(map_path)
@@ -208,7 +211,7 @@ async def generate_artifacts(
                 try:
                     status = await client.artifacts.generate_report(
                         notebook_id,
-                        report_format="briefing-doc",
+                        report_format=ReportFormat.BRIEFING_DOC,
                     )
                     await client.artifacts.wait_for_completion(notebook_id, status.task_id)
                     brief_path = out / "briefing.md"
