@@ -439,60 +439,91 @@ def build_app() -> Any:
         # ---- Ask the Council (interactive simulation) ----
         html.Div([
             html.Div([
-                html.H2([
-                    html.Span("Ask ", style={"color": TEXT}),
-                    html.Span("the Council", style={"color": GOLD}),
-                ], style={
-                    "fontSize": "1.8em", "fontWeight": "800",
-                    "margin": "0 0 8px",
-                }),
+                # Hero brand
+                html.Div([
+                    html.Span("K", style={"color": GOLD, "fontSize": "2.5em", "fontWeight": "900"}),
+                    html.Span("-ZERO", style={"color": TEXT, "fontSize": "2.5em", "fontWeight": "900"}),
+                ], style={"textAlign": "center", "marginBottom": "8px", "letterSpacing": "0.08em"}),
+
                 html.P(
-                    "Type a question. 8 minds will debate it.",
-                    style={"color": MUTED, "fontSize": "1em", "margin": "0 0 24px"},
+                    "8 minds. 1 question. Infinite consequences.",
+                    style={"color": MUTED, "textAlign": "center", "fontSize": "1.05em",
+                           "margin": "0 0 32px", "letterSpacing": "0.02em"},
                 ),
 
-                # Input row
+                # The big question input (textarea, not single line)
                 html.Div([
-                    dcc.Input(
+                    dcc.Textarea(
                         id="question-input",
-                        type="text",
                         placeholder=random.choice(PLACEHOLDER_QUESTIONS),
                         style={
-                            "flex": "1",
-                            "padding": "14px 18px",
-                            "fontSize": "1em",
+                            "width": "100%",
+                            "minHeight": "80px",
+                            "padding": "18px 20px",
+                            "fontSize": "1.15em",
+                            "lineHeight": "1.5",
                             "backgroundColor": "#0d1117",
                             "color": TEXT,
-                            "border": f"1px solid {BORDER}",
-                            "borderRadius": "8px",
+                            "border": f"2px solid {BORDER}",
+                            "borderRadius": "12px",
                             "outline": "none",
                             "fontFamily": "inherit",
+                            "resize": "vertical",
+                            "boxSizing": "border-box",
                         },
-                        debounce=True,
                     ),
-                    html.Button(
-                        "Ask the Council",
+                ], style={"maxWidth": "680px", "margin": "0 auto"}),
+
+                # Example questions as clickable chips
+                html.Div([
+                    html.Span("Try: ", style={"color": MUTED, "fontSize": "0.82em", "marginRight": "8px"}),
+                    *[html.Span(q, style={
+                        "backgroundColor": CARD, "color": MUTED,
+                        "padding": "5px 14px", "borderRadius": "20px",
+                        "fontSize": "0.78em", "cursor": "pointer",
+                        "border": f"1px solid {BORDER}",
+                        "display": "inline-block", "margin": "3px",
+                        "transition": "all 0.2s",
+                    }) for q in [
+                        "What is the point of life?",
+                        "Should AI replace human jobs?",
+                        "Is death the enemy or the teacher?",
+                        "Should I quit my PhD?",
+                    ]],
+                ], style={"textAlign": "center", "marginTop": "14px", "maxWidth": "680px",
+                          "margin": "14px auto 0"}),
+
+                # Big CTA button
+                html.Div([
+                    html.Button([
+                        html.Span("\u26A1 ", style={"fontSize": "1.1em"}),
+                        html.Span("Ask the Council"),
+                    ],
                         id="run-btn",
                         n_clicks=0,
                         style={
-                            "padding": "14px 28px",
-                            "fontSize": "1em",
+                            "padding": "16px 48px",
+                            "fontSize": "1.1em",
                             "fontWeight": "700",
                             "backgroundColor": GOLD,
                             "color": BG,
                             "border": "none",
-                            "borderRadius": "8px",
+                            "borderRadius": "30px",
                             "cursor": "pointer",
-                            "whiteSpace": "nowrap",
                             "fontFamily": "inherit",
+                            "letterSpacing": "0.02em",
+                            "boxShadow": f"0 4px 20px rgba(243, 156, 18, 0.3)",
+                            "transition": "all 0.2s",
                         },
                     ),
-                ], style={
-                    "display": "flex",
-                    "gap": "12px",
-                    "maxWidth": "700px",
-                    "margin": "0 auto",
-                }),
+                ], style={"textAlign": "center", "marginTop": "24px"}),
+
+                # Subtitle under button
+                html.P(
+                    "Powered by Groq (free) \u00b7 3 rounds \u00b7 6 agent responses \u00b7 ~60 seconds",
+                    style={"color": MUTED, "textAlign": "center", "fontSize": "0.75em",
+                           "marginTop": "12px", "opacity": "0.6"},
+                ),
 
                 # No API key message
                 html.Div(
@@ -502,12 +533,13 @@ def build_app() -> Any:
                         "color": ACCENT_RED,
                         "fontSize": "0.85em",
                         "marginTop": "12px",
+                        "textAlign": "center",
                         "display": "none" if LLM_API_KEY else "block",
                     },
                 ),
 
                 # Status area
-                html.Div(id="sim-status", style={"marginTop": "16px", "textAlign": "center"}),
+                html.Div(id="sim-status", style={"marginTop": "20px", "textAlign": "center"}),
 
                 # Results area with loading spinner
                 dcc.Loading(
