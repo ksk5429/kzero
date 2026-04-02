@@ -2011,9 +2011,45 @@ def _build_pipeline_info(html: Any) -> Any:
 
 
 def _build_footer(html: Any) -> Any:
-    """Section 7: Footer with GitHub link."""
+    """Footer with local run CTA + GitHub link."""
     return html.Div([
-        html.Hr(style={"border": "none", "borderTop": f"1px solid {BORDER}"}),
+        # "Run Locally" banner
+        html.Div([
+            html.Div([
+                html.Div("Want unlimited deliberation?", style={
+                    "color": GOLD, "fontWeight": "700", "fontSize": "1.1em",
+                    "marginBottom": "8px",
+                }),
+                html.P(
+                    "This demo runs on a free API with rate limits. "
+                    "For unlimited sessions with deep multi-step evolution, "
+                    "run K-ZERO locally with Ollama (free, no API key needed).",
+                    style={"color": MUTED, "fontSize": "0.88em", "margin": "0 0 16px",
+                           "lineHeight": "1.5"},
+                ),
+                html.Pre(
+                    "git clone https://github.com/ksk5429/kzero.git && cd kzero\n"
+                    "pip install -r requirements.txt\n"
+                    "# Install Ollama: https://ollama.com\n"
+                    "ollama pull qwen2.5:7b\n"
+                    "python -m runner.demiurge          # Interactive god-mode\n"
+                    "python -m runner.overnight \"Your question\" --runs 50 --steps 5",
+                    style={
+                        "backgroundColor": "#0d1117", "color": "#7ee787",
+                        "padding": "14px 16px", "borderRadius": "8px",
+                        "fontSize": "0.82em", "overflowX": "auto",
+                        "border": f"1px solid {BORDER}", "margin": "0",
+                    },
+                ),
+            ], style={
+                "backgroundColor": CARD, "padding": "24px",
+                "borderRadius": "12px", "border": f"1px solid {GOLD}40",
+                "maxWidth": "680px", "margin": "0 auto",
+            }),
+        ], style={"padding": "40px 20px 20px"}),
+
+        html.Hr(style={"border": "none", "borderTop": f"1px solid {BORDER}",
+                        "marginTop": "32px"}),
         html.Div([
             html.P([
                 "Powered by ",
@@ -2031,13 +2067,6 @@ def _build_footer(html: Any) -> Any:
             ], style={
                 "margin": "10px 0 0", "color": MUTED, "fontSize": "0.85em",
             }),
-            html.P(
-                "Ask your own question:  python -m runner.demiurge",
-                style={
-                    "margin": "8px 0 0", "color": MUTED,
-                    "fontSize": "0.8em", "fontFamily": "monospace",
-                },
-            ),
             html.P(
                 "The book is the translation layer between swarm intelligence and individual human understanding.",
                 style={
