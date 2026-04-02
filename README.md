@@ -1,3 +1,15 @@
+---
+title: K-ZERO Council of 8
+emoji: "🎯"
+colorFrom: red
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: true
+license: mit
+short_description: "8 minds. 1 question. Infinite consequences."
+---
+
 ```
  ██████╗ ██████╗ ██╗   ██╗███╗   ██╗ ██████╗██╗██╗          ██████╗ ███████╗     █████╗ 
 ██╔════╝██╔═══██╗██║   ██║████╗  ██║██╔════╝██║██║         ██╔═══██╗██╔════╝    ██╔══██╗
@@ -31,7 +43,8 @@ Musk argues with Sartre about free will. Feynman calls bullshit on Johnson's imm
 
 | Method | Link | What You Get |
 |--------|------|-------------|
-| **Kaggle Notebook** | [Open in Kaggle](https://kaggle.com/) | Run the full simulation in your browser. Zero setup. |
+| **Live Demo** | [**https://kyeongsun-kzero.hf.space**](https://huggingface.co/spaces/kyeongsun/kzero) | Interactive dashboard — no setup needed |
+| **Kaggle Notebook** | [Open in Kaggle](https://kaggle.com/) | Run the full simulation in your browser |
 | **Local (recommended)** | See Quick Start below | K-ZERO Console + Dash Dashboard + Full control |
 
 ### Local Quick Play (3 minutes)
