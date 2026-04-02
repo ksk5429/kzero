@@ -1,0 +1,16 @@
+.venv/
+.git/
+mirofish/
+dist/
+build/
+*.egg-info/
+characters/*/sources/
+sources/
+predictions/batch_*.txt
+reports/*.html
+reports/*.pdf
+marketing/
+notebooks/
+__pycache__/
+*.pyc
+.env
