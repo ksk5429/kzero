@@ -324,14 +324,14 @@ def _run_council_thread(question: str):
         all_agents = list(agent_names)  # All 7 non-Kevin agents
         random.shuffle(all_agents)
 
-        _add("[MODERATOR]",
+        _add("[K-ZERO]",
              f"Council, the question is: \"{question}\"\n\n"
              "We follow the dialectic. Every member speaks each round. "
              "Positions must EVOLVE through the process.",
              0, "moderator")
 
         # === ROUND 1: THESIS — ALL agents state initial positions ===
-        _add("[MODERATOR]",
+        _add("[K-ZERO]",
              "ROUND 1 \u2014 THESIS: Each of you, state your position. "
              "Be direct. Take a clear stance in 2-3 sentences.",
              1, "moderator", "THESIS")
@@ -343,7 +343,7 @@ def _run_council_thread(question: str):
                 1, "THESIS", max_tok=200)
 
         # === ROUND 2: ANTITHESIS — ALL agents challenge someone ===
-        _add("[MODERATOR]",
+        _add("[K-ZERO]",
              "ROUND 2 \u2014 ANTITHESIS: Everyone has spoken. "
              "Now challenge the position you disagree with MOST. Name the person.",
              2, "moderator", "ANTITHESIS")
@@ -357,7 +357,7 @@ def _run_council_thread(question: str):
                 2, "ANTITHESIS", max_tok=200)
 
         # === ROUND 3: SYNTHESIS — ALL agents reflect ===
-        _add("[MODERATOR]",
+        _add("[K-ZERO]",
              "ROUND 3 \u2014 SYNTHESIS: You've attacked each other. "
              "Now REFLECT. What tension exists between your view and the "
              "strongest counter-argument? Can both be true?",
@@ -372,13 +372,13 @@ def _run_council_thread(question: str):
                 3, "SYNTHESIS", max_tok=200)
 
         # === GOD-MODE TWIST ===
-        _add("[GOD-MODE]",
+        _add("[GOD]",
              "TWIST: What if the question itself is wrong? "
              "What is the REAL question behind this question?",
              4, "god_mode")
 
         # === ROUND 4: REVISION — ALL agents revise ===
-        _add("[MODERATOR]",
+        _add("[K-ZERO]",
              "ROUND 4 \u2014 REVISION: Given everything \u2014 theses, attacks, "
              "reflections, and the twist \u2014 state your FINAL position. "
              "Has it changed? If so, why? If not, why did nothing convince you?",
@@ -794,7 +794,7 @@ def build_app() -> Any:
                 border_color = ACCENT_RED
                 name_style = {"color": ACCENT_RED, "fontWeight": "700", "fontSize": "1em"}
                 bg = "rgba(248, 81, 73, 0.08)"
-                display_name = "GOD-MODE"
+                display_name = "GOD"
             elif msg_type == "moderator":
                 border_color = GOLD
                 name_style = {"color": GOLD, "fontWeight": "700", "fontSize": "1em"}
