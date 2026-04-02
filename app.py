@@ -744,20 +744,7 @@ def build_app() -> Any:
                             "justifyContent": "center",
                         },
                     ),
-                    # Stop / Reset button
-                    html.Button(
-                        "\u25A0 Stop",
-                        id="stop-btn",
-                        n_clicks=0,
-                        style={
-                            "padding": "10px 18px",
-                            "fontSize": "0.9em", "fontWeight": "700",
-                            "backgroundColor": ACCENT_RED, "color": "#fff",
-                            "border": "none", "borderRadius": "22px",
-                            "cursor": "pointer", "flexShrink": "0",
-                            "whiteSpace": "nowrap",
-                        },
-                    ),
+                    # (stop button is below the input bar)
                 ], style={
                     "display": "flex",
                     "alignItems": "center",
@@ -768,8 +755,20 @@ def build_app() -> Any:
                     "borderRadius": "0 0 12px 12px",
                 }),
 
-                # Polling interval (disabled by default, enabled during simulation)
+                # Polling interval
                 dcc.Interval(id="sim-poll", interval=2000, disabled=True),
+
+                # Stop / Reset — plain link that reloads the page
+                html.Div(
+                    html.A("STOP / NEW QUESTION", href="/", style={
+                        "display": "block", "textAlign": "center",
+                        "padding": "10px", "fontSize": "0.82em",
+                        "fontWeight": "700", "color": "#f85149",
+                        "textDecoration": "none", "letterSpacing": "0.05em",
+                        "cursor": "pointer",
+                    }),
+                    style={"borderTop": f"1px solid {BORDER}"},
+                ),
 
                 # Hidden stores
                 dcc.Store(id="sim-timestamp", data=0),
@@ -891,24 +890,11 @@ def build_app() -> Any:
         Output("sim-poll", "disabled", allow_duplicate=True),
         Output("sim-status", "children", allow_duplicate=True),
         Input("sim-poll", "n_intervals"),
-        Input("stop-btn", "n_clicks"),
         State("sim-msg-count", "data"),
         prevent_initial_call=True,
     )
-    def poll_messages(n_intervals, stop_clicks, last_count):
-        global _sim_stop, _sim_running, _sim_done
-
-        # Handle stop button
-        ctx = callback_context
-        if ctx.triggered and ctx.triggered[0]["prop_id"] == "stop-btn.n_clicks":
-            if stop_clicks:
-                _sim_stop = True
-                _sim_running = False
-                _sim_done = True
-                return no_update, True, html.Div(
-                    "\u23F9 Stopped. Type a new question and press send.",
-                    style={"color": GOLD, "fontSize": "0.9em"})
-        messages = list(_sim_messages)  # Copy to avoid race conditions
+    def poll_messages(n_intervals, last_count):
+        messages = list(_sim_messages)
 
         if not messages and not _sim_done:
             return no_update, no_update, no_update
