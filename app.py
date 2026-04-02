@@ -314,8 +314,11 @@ def build_app() -> Any:
             _build_verdict(html, dcc, go, meta, analysis, prediction),
             _build_who_said_what(html, analysis),
             _build_clash_map(html, dcc, go, analysis),
+            _build_position_tracking(html, analysis),
+            _build_topic_clusters(html, analysis),
             _build_conversation(html, transcript),
             _build_emergent_insights(html, analysis),
+            _build_pipeline_info(html),
             _build_footer(html),
         ], style=PAGE_STYLE)
 
@@ -1026,6 +1029,127 @@ def _build_emergent_insights(html: Any, analysis: dict) -> Any:
             style={"color": MUTED, "marginBottom": "32px", "fontSize": "0.95em"},
         ),
         *cards,
+    ], style=_section_style())
+
+
+def _build_position_tracking(html: Any, analysis: dict) -> Any:
+    """Section: Who shifted their position during deliberation."""
+    tracking = analysis.get("position_tracking", {})
+    if not tracking:
+        return html.Div()
+
+    cards: list[Any] = []
+    for name, data in tracking.items():
+        shifted = data.get("shifted", False)
+        initial = data.get("initial_position", "")
+        final = data.get("final_position", "")
+        reason = data.get("shift_description", "")
+        color = _agent_color(name)
+        short = name.split()[0] if "(" not in name else name.split("(")[0].strip()
+
+        if shifted:
+            badge = html.Span("SHIFTED", style={
+                "color": BG, "backgroundColor": "#f85149", "padding": "2px 8px",
+                "borderRadius": "4px", "fontSize": "0.75em", "fontWeight": "700"})
+        else:
+            badge = html.Span("HELD FIRM", style={
+                "color": MUTED, "backgroundColor": CARD, "padding": "2px 8px",
+                "borderRadius": "4px", "fontSize": "0.75em", "border": f"1px solid {BORDER}"})
+
+        cards.append(html.Div([
+            html.Div(style={"display": "flex", "alignItems": "center", "gap": "10px",
+                             "marginBottom": "8px"}, children=[
+                html.Span(short, style={"color": color, "fontWeight": "700", "fontSize": "1.05em"}),
+                badge,
+            ]),
+            html.Div([
+                html.Div("Initial:", style={"color": MUTED, "fontSize": "0.75em"}),
+                html.P(initial[:150], style={"color": TEXT, "fontSize": "0.85em", "margin": "0 0 8px"}),
+            ]) if initial else html.Div(),
+            html.Div([
+                html.Div("Final:", style={"color": MUTED, "fontSize": "0.75em"}),
+                html.P(final[:150], style={"color": TEXT, "fontSize": "0.85em", "margin": "0 0 8px"}),
+            ]) if final else html.Div(),
+            html.P(reason, style={"color": GOLD, "fontSize": "0.8em", "fontStyle": "italic",
+                                   "margin": "0"}) if reason else html.Div(),
+        ], style={**_card_style(), "borderLeft": f"3px solid {color}", "marginBottom": "10px"}))
+
+    return html.Div([
+        html.H2("Position Evolution", style={
+            "color": TEXT, "fontSize": "1.6em", "fontWeight": "700", "marginBottom": "8px"}),
+        html.P("How each mind moved during the deliberation.",
+               style={"color": MUTED, "marginBottom": "20px", "fontSize": "0.95em"}),
+        html.Div(cards, style={"display": "grid",
+                                "gridTemplateColumns": "repeat(auto-fill, minmax(280px, 1fr))",
+                                "gap": "12px"}),
+    ], style=_section_style())
+
+
+def _build_topic_clusters(html: Any, analysis: dict) -> Any:
+    """Section: Topic clusters identified in the deliberation."""
+    clusters = analysis.get("topic_clusters", [])
+    if not clusters:
+        return html.Div()
+
+    cards: list[Any] = []
+    for cluster in clusters:
+        theme = cluster.get("theme", "Unknown")
+        desc = cluster.get("description", "")
+        agents_engaged = cluster.get("engaged_agents", [])
+        round_range = cluster.get("round_range", [])
+
+        agent_pills = [html.Span(a.split()[0], style={
+            "backgroundColor": _agent_color(a), "color": BG,
+            "padding": "2px 8px", "borderRadius": "12px",
+            "fontSize": "0.75em", "fontWeight": "600", "marginRight": "4px",
+        }) for a in agents_engaged]
+
+        round_text = f"Rounds {round_range[0]}-{round_range[1]}" if len(round_range) == 2 else ""
+
+        cards.append(html.Div([
+            html.Div(theme, style={"color": TEXT, "fontWeight": "700", "fontSize": "1.1em",
+                                    "marginBottom": "6px"}),
+            html.P(desc, style={"color": MUTED, "fontSize": "0.85em", "margin": "0 0 8px"}),
+            html.Div(agent_pills, style={"marginBottom": "6px"}),
+            html.Span(round_text, style={"color": MUTED, "fontSize": "0.75em"}) if round_text else html.Div(),
+        ], style={**_card_style(), "borderTop": f"3px solid {GOLD}"}))
+
+    return html.Div([
+        html.H2("Topic Clusters", style={
+            "color": TEXT, "fontSize": "1.6em", "fontWeight": "700", "marginBottom": "8px"}),
+        html.P("Themes that dominated the discussion.",
+               style={"color": MUTED, "marginBottom": "20px", "fontSize": "0.95em"}),
+        html.Div(cards, style={"display": "grid",
+                                "gridTemplateColumns": "repeat(auto-fill, minmax(260px, 1fr))",
+                                "gap": "12px"}),
+    ], style=_section_style())
+
+
+def _build_pipeline_info(html: Any) -> Any:
+    """Section: Show the full K-ZERO pipeline."""
+    steps = [
+        ("Simulation", "8 agents debate across N rounds", "transcript.json"),
+        ("Analysis", "LLM extracts positions, clashes, insights", "analysis.json"),
+        ("Prediction", "Run 1000x, probability distribution", "prediction.json"),
+        ("Report", "Quarto book: HTML, PDF, DOCX", "report.pdf"),
+        ("Podcast", "NotebookLM Audio Overview", "podcast.mp3"),
+        ("Study Guide", "Structured learning material", "study_guide.md"),
+        ("Quiz + Cards", "Test your understanding", "quiz.json"),
+    ]
+    cards = [html.Div([
+        html.Div(title, style={"color": GOLD, "fontWeight": "700", "fontSize": "1em", "marginBottom": "4px"}),
+        html.P(desc, style={"color": MUTED, "fontSize": "0.8em", "margin": "0 0 6px"}),
+        html.Code(output, style={"color": TEXT, "fontSize": "0.75em", "opacity": "0.5"}),
+    ], style={**_card_style(), "padding": "14px 16px"}) for title, desc, output in steps]
+
+    return html.Div([
+        html.H2("The K-ZERO Pipeline", style={
+            "color": TEXT, "fontSize": "1.6em", "fontWeight": "700", "marginBottom": "8px"}),
+        html.P("One question produces seven artifacts.",
+               style={"color": MUTED, "marginBottom": "20px", "fontSize": "0.95em"}),
+        html.Div(cards, style={"display": "grid",
+                                "gridTemplateColumns": "repeat(auto-fill, minmax(200px, 1fr))",
+                                "gap": "12px"}),
     ], style=_section_style())
 
 
