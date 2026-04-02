@@ -13,9 +13,12 @@ mirofish/
 characters/*/sources/
 sources/
 
-# Generated outputs (keep sample transcripts checked in)
+# Generated outputs (keep samples checked in, ignore bulk)
 visualizations/*.html
 notebooks/.ipynb_checkpoints/
+predictions/batch_*.txt
+reports/*.html
+reports/*.pdf
 
 # OS
 .DS_Store

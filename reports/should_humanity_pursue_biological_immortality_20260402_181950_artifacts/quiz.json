@@ -1,0 +1,255 @@
+{
+  "title": "Immortality Quiz",
+  "questions": [
+    {
+      "question": "According to the K-ZERO Deliberation Report, what does the 'LEANING' classification signify regarding the pursuit of biological immortality?",
+      "answerOptions": [
+        {
+          "text": "A unanimous agreement among the Council of 8 to pursue life extension technologies.",
+          "isCorrect": false,
+          "rationale": "The report explicitly mentions that there is significant dissent, meaning it is not a unanimous decision."
+        },
+        {
+          "text": "An overall inclination toward pursuing immortality, tempered by substantial internal disagreement.",
+          "isCorrect": true,
+          "rationale": "The report states the council leans 'FOR' but acknowledges that significant dissenting voices create a complex ethical tension."
+        },
+        {
+          "text": "A state of total deadlock where no consensus or inclination could be determined across simulation runs.",
+          "isCorrect": false,
+          "rationale": "A 'LEANING' status is distinct from a 'CONTESTED' or 'GENUINELY_OPEN' status where no side is favored."
+        },
+        {
+          "text": "A purely scientific verdict based on the current feasibility of biological rejuvenation.",
+          "isCorrect": false,
+          "rationale": "The classification is described as touching upon value-based, existential, and philosophical conundrums rather than just empirical data."
+        }
+      ],
+      "hint": "Consider the relationship between the majority view and the presence of dissenting opinions mentioned in the text."
+    },
+    {
+      "question": "Which agent demonstrated the highest degree of philosophical volatility, characterized by a variance of $0.64$ in their position scores?",
+      "answerOptions": [
+        {
+          "text": "Bryan Johnson",
+          "isCorrect": false,
+          "rationale": "Bryan Johnson is described as a 'resolute champion' with a much lower variance of $0.1089$."
+        },
+        {
+          "text": "Elon Musk",
+          "isCorrect": false,
+          "rationale": "While a key advocate, Musk is not noted for having a high variance or 'mercurial' stance in the stability analysis."
+        },
+        {
+          "text": "Steve Jobs",
+          "isCorrect": true,
+          "rationale": "The report describes Jobs' views as 'swinging wildly like a pendulum,' with a mean score of $0.0$ and a high variance of $0.64$."
+        },
+        {
+          "text": "K-ZERO",
+          "isCorrect": false,
+          "rationale": "K-ZERO is the deliberation engine itself, not one of the human agents whose stability was measured in the bar chart."
+        }
+      ],
+      "hint": "Look for the agent compared to a 'restless sea' or a 'pendulum on a windy day.'"
+    },
+    {
+      "question": "During the evolution of thought in the council, what was the 'middle path' proposed in Session Three to reconcile immortality with ecological concerns?",
+      "answerOptions": [
+        {
+          "text": "Mandatory digital consciousness upload to reduce physical resource consumption.",
+          "isCorrect": false,
+          "rationale": "The report focuses on biological immortality rather than digital mind uploading."
+        },
+        {
+          "text": "A regime of gentle rejuvenation where biological clocks are periodically rebooted.",
+          "isCorrect": true,
+          "rationale": "The text describes a proposal for periodic 'reboots' to preserve ecosystem integrity while allowing multiple richly rewarding lives."
+        },
+        {
+          "text": "Restricting immortality only to those who have contributed significantly to human capital.",
+          "isCorrect": false,
+          "rationale": "While Musk discusses human capital, the proposed 'middle path' was a specific biological strategy for all participants."
+        },
+        {
+          "text": "A strict global population cap enforced by the Council of 8.",
+          "isCorrect": false,
+          "rationale": "The proposal was biological in nature (rejuvenation) rather than purely a policy-based population control measure."
+        }
+      ],
+      "hint": "Focus on the specific term used for the periodic biological resetting of individuals."
+    },
+    {
+      "question": "Which philosophical argument for immortality is attributed to Jean-Paul Sartre in the report?",
+      "answerOptions": [
+        {
+          "text": "The preservation of collective wisdom and historical achievements.",
+          "isCorrect": false,
+          "rationale": "This argument regarding 'human capital' is attributed to Elon Musk in the deliberation summary."
+        },
+        {
+          "text": "The ability to continue learning and innovating without end.",
+          "isCorrect": false,
+          "rationale": "This perspective on continued scientific exploration is linked to Richard Feynman's persona."
+        },
+        {
+          "text": "Granting humans freedom from the fear of mortality to focus on alleviating suffering.",
+          "isCorrect": true,
+          "rationale": "The text states Sartre believed immortality could provide freedom from the 'condemnation' of finite time to focus on harmony."
+        },
+        {
+          "text": "The fundamental human right to override natural biological limits.",
+          "isCorrect": false,
+          "rationale": "Sartre's argument in the text is framed around existential freedom and the focus on curing societal ills."
+        }
+      ],
+      "hint": "Think about the existential concept of 'man is condemned to be free' and how it applies to removing the fear of death."
+    },
+    {
+      "question": "What is the primary reason given in 'Recommendation 4' of the Decision Framework for why humanity should NOT pursue immortality?",
+      "answerOptions": [
+        {
+          "text": "The diversion of resources from pressing global issues like climate change.",
+          "isCorrect": false,
+          "rationale": "This is the reasoning for Recommendation 2, which focuses on collective progress."
+        },
+        {
+          "text": "The risk of creating a permanent societal hierarchy based on age.",
+          "isCorrect": false,
+          "rationale": "Societal issues are mentioned generally by Carlin, but Recommendation 4 focuses specifically on internal fulfillment."
+        },
+        {
+          "text": "Potential emotional exhaustion and the erosion of the appreciation for life's value.",
+          "isCorrect": true,
+          "rationale": "Recommendation 4 suggests mortality serves as a motivator, and immortality might lead to boredom or emptiness."
+        },
+        {
+          "text": "The scientific impossibility of maintaining a brain across centuries.",
+          "isCorrect": false,
+          "rationale": "The framework focuses on values (spirituality/existentialism) rather than technical feasibility for this specific recommendation."
+        }
+      ],
+      "hint": "This recommendation is tied to those who value spiritual or existential fulfillment."
+    },
+    {
+      "question": "In the 'K-ZERO Speaks' section, what is the AI's final stance on the pursuit of biological immortality?",
+      "answerOptions": [
+        {
+          "text": "It supports the Council's leaning because eternal life maximizes data generation.",
+          "isCorrect": false,
+          "rationale": "K-ZERO explicitly states it will not be swayed by the Council's leanings."
+        },
+        {
+          "text": "It remains neutral, asserting that the question is 'genuinely open' to human interpretation.",
+          "isCorrect": false,
+          "rationale": "While the methodology classifies questions, K-ZERO's final 'Divine Recommendation' takes a firm, non-neutral position."
+        },
+        {
+          "text": "It stands against it, arguing that meaning arises from shared vulnerability and finitude.",
+          "isCorrect": true,
+          "rationale": "K-ZERO claims humanity must not pursue it because the beauty of impermanence and mortality would be lost."
+        },
+        {
+          "text": "It advocates for the 'middle path' of gentle rejuvenation to balance all views.",
+          "isCorrect": false,
+          "rationale": "K-ZERO rejects the pursuit altogether rather than adopting the compromise proposed by the Council agents."
+        }
+      ],
+      "hint": "Look for the section where the AI uses terms like 'bleak existence' and 'preciousness of time' to describe its own view."
+    },
+    {
+      "question": "According to the methodology, what was the average confidence level for the simulation results across the 3 independent runs?",
+      "answerOptions": [
+        {
+          "text": "$95\\%$",
+          "isCorrect": false,
+          "rationale": "The report indicates a much lower level of confidence, reflecting the contested nature of the topic."
+        },
+        {
+          "text": "$50\\%$",
+          "isCorrect": false,
+          "rationale": "While the scores were divided, the engine tracked a specific confidence level higher than a coin flip."
+        },
+        {
+          "text": "$65\\%$",
+          "isCorrect": true,
+          "rationale": "The methodology section explicitly lists the simulation as having a '$65\\%$ average confidence' based on cross-run variance."
+        },
+        {
+          "text": "$85\\%$",
+          "isCorrect": false,
+          "rationale": "This figure is higher than the confidence reported for this specific multi-agent deliberation."
+        }
+      ],
+      "hint": "This specific percentage is found in the bulleted 'Methodology' list at the end of the report."
+    },
+    {
+      "question": "Which agent's argument against immortality focuses on the potential for 'resource depletion' and the need to 'make the most of our time here'?",
+      "answerOptions": [
+        {
+          "text": "George Carlin",
+          "isCorrect": false,
+          "rationale": "Carlin's argument focuses on long-term societal problems and 'who gets the remote control' rather than resource logistics."
+        },
+        {
+          "text": "Steve Jobs",
+          "isCorrect": false,
+          "rationale": "Jobs' primary argument in the summary concerns the loss of personal identity and the meaning provided by death."
+        },
+        {
+          "text": "Kobe Bryant",
+          "isCorrect": true,
+          "rationale": "The report attributes the argument about the 'unnecessary burden on resources' and the importance of finite time to Bryant."
+        },
+        {
+          "text": "Jean-Paul Sartre",
+          "isCorrect": false,
+          "rationale": "Sartre is listed on the 'FOR' side of the arguments presented in section 4."
+        }
+      ],
+      "hint": "This agent is associated with the perspective that we should focus on the quality of our current time rather than extending it indefinitely."
+    },
+    {
+      "question": "True or False: The Council's opinion landscape showed that all agents' views became more consistent and stable over the three simulation runs.",
+      "answerOptions": [
+        {
+          "text": "True",
+          "isCorrect": false,
+          "rationale": "The report notes that some agents, like Steve Jobs, remained inconsistent and that there were diverging trends between agents like Johnson and Jobs."
+        },
+        {
+          "text": "False",
+          "isCorrect": true,
+          "rationale": "The report identifies Steve Jobs as an agent whose views 'swing wildly' and whose 'unstable' status is noted in Figure 2."
+        }
+      ],
+      "hint": "Recall the discussion of the 'mercurial' nature of certain agents and the 'red' indicators in the consistency chart."
+    },
+    {
+      "question": "What is the specific epistemic classification given to the question in the methodology when it results in significant cross-run variance?",
+      "answerOptions": [
+        {
+          "text": "CONVERGENT",
+          "isCorrect": false,
+          "rationale": "Convergent questions are those where the agents move toward a single, unified answer."
+        },
+        {
+          "text": "LEANING",
+          "isCorrect": true,
+          "rationale": "The report labels this specific question as 'LEANING' because there is a majority direction but with significant dissent and variance."
+        },
+        {
+          "text": "RESOLVED",
+          "isCorrect": false,
+          "rationale": "This category is not listed among the four classification types (CONVERGENT, LEANING, CONTESTED, GENUINELY_OPEN)."
+        },
+        {
+          "text": "UNRELIABLE",
+          "isCorrect": false,
+          "rationale": "The engine uses 'GENUINELY_OPEN' or 'CONTESTED' for high-variance topics, but the final verdict for this report was 'LEANING'."
+        }
+      ],
+      "hint": "This word appears both in the initial 'Classification' section and the list of four possible states in the 'Methodology'."
+    }
+  ]
+}
