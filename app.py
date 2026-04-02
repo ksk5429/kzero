@@ -251,7 +251,10 @@ def _score_position(text: str) -> float:
 
 
 def _run_mini_council(question: str) -> dict:
-    """Run a mini 3-round, 2-speakers-per-round council simulation.
+    """Run a multi-agent deliberation with swarm intelligence mechanics.
+
+    Agents see and respond to EACH OTHER, not just the question.
+    The conversation builds: each agent reacts to what was said before.
 
     Returns dict with 'responses' list and 'error' string (empty on success).
     """
@@ -261,71 +264,179 @@ def _run_mini_council(question: str) -> dict:
 
     try:
         # Override env for this run
-        original_key = os.environ.get("LLM_API_KEY", "")
-        original_url = os.environ.get("LLM_BASE_URL", "")
-        original_model = os.environ.get("COUNCIL_MODEL", "")
-
+        original_env = {
+            k: os.environ.get(k, "")
+            for k in ("LLM_API_KEY", "LLM_BASE_URL", "COUNCIL_MODEL", "COUNCIL_MAX_TOKENS")
+        }
         if LLM_API_KEY:
             os.environ["LLM_API_KEY"] = LLM_API_KEY
         if LLM_BASE_URL:
             os.environ["LLM_BASE_URL"] = LLM_BASE_URL
         if COUNCIL_MODEL:
             os.environ["COUNCIL_MODEL"] = COUNCIL_MODEL
+        os.environ["COUNCIL_MAX_TOKENS"] = "500"
 
         client = _create_client()
         agents = load_agents(PROJECT_ROOT, client=client)
 
         # Restore env
-        if original_key:
-            os.environ["LLM_API_KEY"] = original_key
-        if original_url:
-            os.environ["LLM_BASE_URL"] = original_url
-        if original_model:
-            os.environ["COUNCIL_MODEL"] = original_model
+        for k, v in original_env.items():
+            if v:
+                os.environ[k] = v
 
-        agent_names = list(agents.keys())
+        agent_names = [n for n in agents.keys() if "Kevin" not in n]
         conversation_history: list[dict[str, Any]] = []
 
-        # Moderator opens
+        # === ROUND 1: Moderator poses the question ===
         opening = {
             "speaker": "[MODERATOR]",
-            "text": f"Council members, today's question: {question}",
+            "text": (
+                f"Council members, the question before you is: \"{question}\"\n\n"
+                "Each of you will speak from your own philosophy. "
+                "Respond to the question AND to what others have said. "
+                "Challenge each other. Build on each other's ideas. "
+                "This is a deliberation, not a monologue."
+            ),
             "round": 0,
             "type": "moderator",
         }
         conversation_history.append(opening)
+        results["responses"].append(opening)
 
-        # 3 rounds, 2 speakers per round (6 total responses)
-        num_rounds = 3
-        speakers_per_round = 2
-
-        for round_num in range(1, num_rounds + 1):
-            # Pick 2 random speakers per round (no repeats within a round)
-            available = [n for n in agent_names if n != "Kevin (\uae40\uacbd\uc120)"]
-            speakers = random.sample(available, min(speakers_per_round, len(available)))
-
-            for speaker_name in speakers:
-                agent = agents[speaker_name]
-                try:
-                    response_text = agent.respond(
-                        conversation_history,
-                        current_topic=question,
-                        max_tokens=300,
-                    )
-                    if not response_text or response_text.startswith("["):
-                        continue
-                except Exception as e:
-                    response_text = f"[{speaker_name} could not respond: {e}]"
+        # === ROUND 1: First 2 agents respond to the question ===
+        round1_speakers = random.sample(agent_names, 2)
+        for speaker_name in round1_speakers:
+            agent = agents[speaker_name]
+            try:
+                response_text = agent.respond(
+                    conversation_history,
+                    current_topic=f"Respond to: \"{question}\"",
+                    max_tokens=500,
+                )
+                if not response_text or response_text.startswith("["):
                     continue
+            except Exception:
+                continue
 
-                entry = {
-                    "speaker": speaker_name,
-                    "text": response_text,
-                    "round": round_num,
-                    "type": "agent",
-                }
-                conversation_history.append(entry)
-                results["responses"].append(entry)
+            entry = {
+                "speaker": speaker_name,
+                "text": response_text,
+                "round": 1,
+                "type": "agent",
+            }
+            conversation_history.append(entry)
+            results["responses"].append(entry)
+
+        # === ROUND 2: Next 2 agents RESPOND TO round 1 speakers ===
+        remaining = [n for n in agent_names if n not in round1_speakers]
+        round2_speakers = random.sample(remaining, min(2, len(remaining)))
+
+        # Inject a moderator prompt that forces engagement
+        r1_names = " and ".join(s.split()[0] for s in round1_speakers)
+        mod_prompt = {
+            "speaker": "[MODERATOR]",
+            "text": f"{r1_names} have spoken. Do you agree or disagree? Challenge their positions.",
+            "round": 2,
+            "type": "moderator",
+        }
+        conversation_history.append(mod_prompt)
+        results["responses"].append(mod_prompt)
+
+        for speaker_name in round2_speakers:
+            agent = agents[speaker_name]
+            try:
+                response_text = agent.respond(
+                    conversation_history,
+                    current_topic=(
+                        f"The question is: \"{question}\". "
+                        f"{r1_names} have already spoken. "
+                        f"Respond to THEIR arguments specifically. "
+                        f"Name them. Agree or disagree with specific points they made."
+                    ),
+                    max_tokens=500,
+                )
+                if not response_text or response_text.startswith("["):
+                    continue
+            except Exception:
+                continue
+
+            entry = {
+                "speaker": speaker_name,
+                "text": response_text,
+                "round": 2,
+                "type": "agent",
+            }
+            conversation_history.append(entry)
+            results["responses"].append(entry)
+
+        # === ROUND 3: 2 more agents + synthesis pressure ===
+        spoken = set(round1_speakers + round2_speakers)
+        round3_pool = [n for n in agent_names if n not in spoken]
+        if len(round3_pool) < 2:
+            round3_pool = random.sample(agent_names, 2)
+        round3_speakers = random.sample(round3_pool, min(2, len(round3_pool)))
+
+        # God-mode injection to spice things up
+        god_injection = {
+            "speaker": "[GOD-MODE]",
+            "text": "PLOT TWIST: Assume the opposite of your current position is true. What would change?",
+            "round": 3,
+            "type": "god_mode",
+        }
+        conversation_history.append(god_injection)
+        results["responses"].append(god_injection)
+
+        for speaker_name in round3_speakers:
+            agent = agents[speaker_name]
+            try:
+                response_text = agent.respond(
+                    conversation_history,
+                    current_topic=(
+                        f"The question is: \"{question}\". "
+                        f"The council has been debating. A god-mode injection asks you to consider "
+                        f"the OPPOSITE of your position. Respond to both the original question "
+                        f"and what other council members have said. Name specific members you agree or disagree with."
+                    ),
+                    max_tokens=500,
+                )
+                if not response_text or response_text.startswith("["):
+                    continue
+            except Exception:
+                continue
+
+            entry = {
+                "speaker": speaker_name,
+                "text": response_text,
+                "round": 3,
+                "type": "agent",
+            }
+            conversation_history.append(entry)
+            results["responses"].append(entry)
+
+        # === SYNTHESIS: Kevin wraps up ===
+        kevin = agents.get("Kevin (\uae40\uacbd\uc120)")
+        if kevin:
+            try:
+                synthesis = kevin.respond(
+                    conversation_history,
+                    current_topic=(
+                        "Synthesize the council's deliberation. "
+                        "Who agreed? Who clashed? What emerged that no one said individually? "
+                        "End with the ONE question this deliberation leaves unanswered."
+                    ),
+                    max_tokens=600,
+                )
+                if synthesis and not synthesis.startswith("["):
+                    entry = {
+                        "speaker": "Kevin (\uae40\uacbd\uc120)",
+                        "text": synthesis,
+                        "round": 4,
+                        "type": "moderator",
+                    }
+                    conversation_history.append(entry)
+                    results["responses"].append(entry)
+            except Exception:
+                pass
 
     except Exception as e:
         results["error"] = f"Simulation failed: {e}\n{traceback.format_exc()}"
