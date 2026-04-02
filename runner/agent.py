@@ -7,6 +7,13 @@ from pathlib import Path
 
 from openai import OpenAI
 
+# Anthropic support (Claude API)
+_USE_ANTHROPIC = False
+try:
+    from anthropic import Anthropic as _AnthropicClient
+except ImportError:
+    _AnthropicClient = None
+
 
 def _read_file(path):
     """Read a text file, return empty string if missing."""
@@ -32,15 +39,75 @@ def _get_api_keys():
 _key_index = 0
 
 
+class _AnthropicAdapter:
+    """Wraps Anthropic SDK to match OpenAI's chat.completions.create interface."""
+
+    def __init__(self, api_key: str):
+        self._client = _AnthropicClient(api_key=api_key)
+        self.chat = self
+
+    @property
+    def completions(self):
+        return self
+
+    def create(self, model, messages, max_tokens=500, temperature=0.85, **kwargs):
+        """Translate OpenAI-style call to Anthropic format."""
+        # Extract system message
+        system_text = ""
+        user_messages = []
+        for msg in messages:
+            if msg["role"] == "system":
+                system_text += msg["content"] + "\n"
+            else:
+                user_messages.append(msg)
+
+        if not user_messages:
+            user_messages = [{"role": "user", "content": "Hello"}]
+
+        response = self._client.messages.create(
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            system=system_text.strip() if system_text else None,
+            messages=user_messages,
+        )
+
+        # Wrap response to match OpenAI format
+        class _Choice:
+            def __init__(self, text):
+                self.message = type("M", (), {"content": text})()
+
+        class _Response:
+            def __init__(self, text):
+                self.choices = [_Choice(text)] if text else []
+
+        text = response.content[0].text if response.content else ""
+        return _Response(text)
+
+
 def _create_client():
-    """Create an OpenAI-compatible client, rotating through available API keys."""
-    global _key_index
+    """Create an LLM client, rotating through available API keys.
+    Supports: OpenAI-compatible APIs (Groq, Gemini, OpenRouter, Ollama) + Anthropic Claude.
+    """
+    global _key_index, _USE_ANTHROPIC
     keys = _get_api_keys()
     key = keys[_key_index % len(keys)]
     _key_index += 1
+
+    base_url = os.getenv("LLM_BASE_URL", "")
+
+    # Detect Anthropic (Claude API)
+    if key.startswith("sk-ant-") or "anthropic" in base_url.lower():
+        _USE_ANTHROPIC = True
+        if _AnthropicClient is None:
+            raise ImportError("pip install anthropic")
+        return _AnthropicAdapter(api_key=key)
+
+    # Default: OpenAI-compatible
+    _USE_ANTHROPIC = False
     return OpenAI(
         api_key=key,
-        base_url=os.getenv("LLM_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/"),
+        base_url=base_url or "https://generativelanguage.googleapis.com/v1beta/openai/",
     )
 
 
