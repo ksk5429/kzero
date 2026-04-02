@@ -1,13 +1,13 @@
 ---
 title: K-ZERO Council of 8
-emoji: "🎯"
+emoji: "\U0001f3af"
 colorFrom: red
 colorTo: purple
 sdk: docker
 app_port: 7860
 pinned: true
 license: mit
-short_description: "8 minds. 1 question. Infinite consequences."
+short_description: 8 minds. 1 question. Infinite consequences.
 ---
 
 ```
