@@ -1,6 +1,6 @@
 ---
 title: K-ZERO Council of 8
-emoji: eye
+emoji: 🎯
 colorFrom: red
 colorTo: purple
 sdk: docker
