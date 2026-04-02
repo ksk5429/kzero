@@ -491,6 +491,28 @@ def build_app() -> Any:
         suppress_callback_exceptions=True,
     )
 
+    # Inject CSS animations for the loading overlay
+    app.index_string = '''<!DOCTYPE html>
+<html>
+<head>{%metas%}{%title%}{%favicon%}{%css%}
+<style>
+@keyframes pulse-orb {
+    0%, 100% { transform: scale(1); opacity: 0.4; box-shadow: 0 0 20px rgba(243,156,18,0.2); }
+    50% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 40px rgba(243,156,18,0.6); }
+}
+@keyframes fade-agent {
+    0%, 100% { opacity: 0.2; transform: translateY(0); }
+    50% { opacity: 1; transform: translateY(-2px); }
+}
+@keyframes glow-btn:hover {
+    box-shadow: 0 6px 30px rgba(243,156,18,0.5);
+    transform: translateY(-1px);
+}
+</style>
+</head>
+<body>{%app_entry%}{%config%}{%scripts%}{%renderer%}</body>
+</html>'''
+
     # Dropdown options
     dropdown_options = [
         {"label": a["title"], "value": a["slug"]}
@@ -649,16 +671,82 @@ def build_app() -> Any:
                     },
                 ),
 
-                # Status area
-                html.Div(id="sim-status", style={"marginTop": "20px", "textAlign": "center"}),
+                # Status area — custom animated loading
+                html.Div(id="sim-status", style={"marginTop": "24px", "textAlign": "center"}),
 
-                # Results area with loading spinner
-                dcc.Loading(
-                    id="sim-loading",
-                    type="dot",
-                    color=GOLD,
-                    children=html.Div(id="sim-results"),
-                ),
+                # Custom loading overlay (shown/hidden by callback)
+                html.Div(id="sim-loading-overlay", style={"display": "none"}, children=[
+                    html.Div(style={
+                        "padding": "48px 24px",
+                        "textAlign": "center",
+                        "backgroundColor": CARD,
+                        "borderRadius": "16px",
+                        "border": f"1px solid {BORDER}",
+                        "maxWidth": "500px",
+                        "margin": "24px auto",
+                    }, children=[
+                        # Pulsing orb animation (CSS keyframes)
+                        html.Div(style={
+                            "width": "60px", "height": "60px",
+                            "borderRadius": "50%",
+                            "background": f"radial-gradient(circle, {GOLD} 0%, transparent 70%)",
+                            "margin": "0 auto 20px",
+                            "animation": "pulse-orb 2s ease-in-out infinite",
+                        }),
+                        # Stage text
+                        html.Div("The Council is deliberating...", style={
+                            "color": GOLD, "fontSize": "1.2em", "fontWeight": "700",
+                            "marginBottom": "12px",
+                        }),
+                        # Rotating agent names
+                        html.Div(style={"marginBottom": "16px"}, children=[
+                            html.Span(name.split()[0], style={
+                                "color": AGENT_COLORS.get(name, MUTED),
+                                "fontSize": "0.85em", "fontWeight": "600",
+                                "padding": "4px 10px", "margin": "3px",
+                                "borderRadius": "14px",
+                                "border": f"1px solid {AGENT_COLORS.get(name, BORDER)}",
+                                "display": "inline-block",
+                                "animation": f"fade-agent {1.5 + i * 0.3}s ease-in-out infinite",
+                            }) for i, name in enumerate([
+                                "Elon Musk", "Richard Feynman", "Kobe Bryant", "Steve Jobs",
+                                "Jean-Paul Sartre", "George Carlin", "Bryan Johnson",
+                            ])
+                        ]),
+                        # Progress stages
+                        html.Div([
+                            html.Div("\u2022 Round 1: First positions stated", style={
+                                "color": MUTED, "fontSize": "0.8em", "margin": "4px 0"}),
+                            html.Div("\u2022 Round 2: Agents challenge each other", style={
+                                "color": MUTED, "fontSize": "0.8em", "margin": "4px 0"}),
+                            html.Div("\u2022 Round 3: God-mode twist injected", style={
+                                "color": MUTED, "fontSize": "0.8em", "margin": "4px 0"}),
+                            html.Div("\u2022 Synthesis: Kevin connects the threads", style={
+                                "color": MUTED, "fontSize": "0.8em", "margin": "4px 0"}),
+                        ], style={"marginTop": "16px"}),
+                        # Timer
+                        html.Div("This takes about 30-90 seconds...", style={
+                            "color": MUTED, "fontSize": "0.75em",
+                            "marginTop": "16px", "opacity": "0.5",
+                        }),
+                    ]),
+                    # CSS Keyframe animations (injected as a style tag workaround)
+                    html.Div(style={"display": "none"}, **{
+                        "data-style": """
+                        @keyframes pulse-orb {
+                            0%, 100% { transform: scale(1); opacity: 0.6; }
+                            50% { transform: scale(1.3); opacity: 1; }
+                        }
+                        @keyframes fade-agent {
+                            0%, 100% { opacity: 0.3; }
+                            50% { opacity: 1; }
+                        }
+                        """
+                    }),
+                ]),
+
+                # Results area
+                html.Div(id="sim-results"),
 
                 # Hidden stores
                 dcc.Store(id="sim-timestamp", data=0),
@@ -725,17 +813,21 @@ def build_app() -> Any:
         Output("sim-results", "children"),
         Output("sim-status", "children"),
         Output("sim-timestamp", "data"),
+        Output("sim-loading-overlay", "style"),
         Input("run-btn", "n_clicks"),
         State("question-input", "value"),
         State("sim-timestamp", "data"),
         prevent_initial_call=True,
     )
     def run_council_simulation(n_clicks: int, question: str | None, last_ts: float) -> tuple:
+        hide_loading = {"display": "none"}
+        show_loading = {"display": "block"}
+
         if not n_clicks or not question or not question.strip():
             return no_update, html.Div(
                 "Please type a question first.",
                 style={"color": ACCENT_RED, "fontSize": "0.9em"},
-            ), no_update
+            ), no_update, hide_loading
 
         # Rate limiting: 60 second cooldown
         now = time.time()
@@ -744,14 +836,14 @@ def build_app() -> Any:
             return no_update, html.Div(
                 f"The Council needs time to deliberate. Try again in {remaining} seconds.",
                 style={"color": GOLD, "fontSize": "0.9em"},
-            ), no_update
+            ), no_update, hide_loading
 
         # Check API key
         if not LLM_API_KEY:
             return no_update, html.Div(
                 "API key not configured. Set LLM_API_KEY environment variable.",
                 style={"color": ACCENT_RED, "fontSize": "0.9em"},
-            ), no_update
+            ), no_update, hide_loading
 
         # Run simulation
         result = _run_mini_council(question.strip())
@@ -760,14 +852,14 @@ def build_app() -> Any:
             return html.Div(), html.Div(
                 f"Error: {result['error'][:200]}",
                 style={"color": ACCENT_RED, "fontSize": "0.85em", "whiteSpace": "pre-wrap"},
-            ), now
+            ), now, hide_loading
 
         responses = result["responses"]
         if not responses:
             return html.Div(), html.Div(
                 "The Council could not generate responses. Check your API key and try again.",
                 style={"color": ACCENT_RED, "fontSize": "0.9em"},
-            ), now
+            ), now, hide_loading
 
         # Build response cards
         cards: list[Any] = []
@@ -860,15 +952,19 @@ def build_app() -> Any:
 
         return html.Div([
             verdict_card,
-            html.H3("Agent Responses", style={
-                "color": TEXT, "fontSize": "1.1em",
-                "fontWeight": "600", "marginBottom": "16px",
+            html.H3("The Deliberation", style={
+                "color": TEXT, "fontSize": "1.3em",
+                "fontWeight": "700", "marginBottom": "4px",
             }),
+            html.P(
+                f"{len([r for r in responses if r['type'] == 'agent'])} agent responses across 3 rounds of swarm intelligence",
+                style={"color": MUTED, "fontSize": "0.85em", "marginBottom": "20px"},
+            ),
             *cards,
-        ], style={"marginTop": "24px", "maxWidth": "700px", "margin": "24px auto 0"}), html.Div(
-            f"Simulation complete \u2014 {len(responses)} responses across 3 rounds.",
+        ], style={"marginTop": "24px", "maxWidth": "750px", "margin": "24px auto 0"}), html.Div(
+            f"Deliberation complete \u2014 {len(responses)} messages, including moderator prompts and god-mode injection.",
             style={"color": ACCENT_GREEN, "fontSize": "0.9em"},
-        ), now
+        ), now, hide_loading
 
     return app
 
