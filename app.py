@@ -251,10 +251,10 @@ def _score_position(text: str) -> float:
 
 
 def _run_mini_council(question: str) -> dict:
-    """Run a multi-agent deliberation with swarm intelligence mechanics.
+    """Run a FAST multi-agent deliberation (2 rounds, optimized for web).
 
     Agents see and respond to EACH OTHER, not just the question.
-    The conversation builds: each agent reacts to what was said before.
+    Designed to complete within 25 seconds on Groq (under HF timeout).
 
     Returns dict with 'responses' list and 'error' string (empty on success).
     """
@@ -274,7 +274,7 @@ def _run_mini_council(question: str) -> dict:
             os.environ["LLM_BASE_URL"] = LLM_BASE_URL
         if COUNCIL_MODEL:
             os.environ["COUNCIL_MODEL"] = COUNCIL_MODEL
-        os.environ["COUNCIL_MAX_TOKENS"] = "500"
+        os.environ["COUNCIL_MAX_TOKENS"] = "250"  # Keep short for web speed
 
         client = _create_client()
         agents = load_agents(PROJECT_ROOT, client=client)
@@ -369,51 +369,7 @@ def _run_mini_council(question: str) -> dict:
             conversation_history.append(entry)
             results["responses"].append(entry)
 
-        # === ROUND 3: 2 more agents + synthesis pressure ===
-        spoken = set(round1_speakers + round2_speakers)
-        round3_pool = [n for n in agent_names if n not in spoken]
-        if len(round3_pool) < 2:
-            round3_pool = random.sample(agent_names, 2)
-        round3_speakers = random.sample(round3_pool, min(2, len(round3_pool)))
-
-        # God-mode injection to spice things up
-        god_injection = {
-            "speaker": "[GOD-MODE]",
-            "text": "PLOT TWIST: Assume the opposite of your current position is true. What would change?",
-            "round": 3,
-            "type": "god_mode",
-        }
-        conversation_history.append(god_injection)
-        results["responses"].append(god_injection)
-
-        for speaker_name in round3_speakers:
-            agent = agents[speaker_name]
-            try:
-                response_text = agent.respond(
-                    conversation_history,
-                    current_topic=(
-                        f"The question is: \"{question}\". "
-                        f"The council has been debating. A god-mode injection asks you to consider "
-                        f"the OPPOSITE of your position. Respond to both the original question "
-                        f"and what other council members have said. Name specific members you agree or disagree with."
-                    ),
-                    max_tokens=500,
-                )
-                if not response_text or response_text.startswith("["):
-                    continue
-            except Exception:
-                continue
-
-            entry = {
-                "speaker": speaker_name,
-                "text": response_text,
-                "round": 3,
-                "type": "agent",
-            }
-            conversation_history.append(entry)
-            results["responses"].append(entry)
-
-        # === SYNTHESIS: Kevin wraps up ===
+        # === SYNTHESIS: Kevin wraps up (skipping Round 3 for web speed) ===
         kevin = agents.get("Kevin (\uae40\uacbd\uc120)")
         if kevin:
             try:
@@ -424,7 +380,7 @@ def _run_mini_council(question: str) -> dict:
                         "Who agreed? Who clashed? What emerged that no one said individually? "
                         "End with the ONE question this deliberation leaves unanswered."
                     ),
-                    max_tokens=600,
+                    max_tokens=300,
                 )
                 if synthesis and not synthesis.startswith("["):
                     entry = {
@@ -653,7 +609,7 @@ def build_app() -> Any:
 
                 # Subtitle under button
                 html.P(
-                    "Powered by Groq (free) \u00b7 3 rounds \u00b7 6 agent responses \u00b7 ~60 seconds",
+                    "Powered by Groq (free) \u00b7 2 rounds + synthesis \u00b7 5 agent responses \u00b7 ~20 seconds",
                     style={"color": MUTED, "textAlign": "center", "fontSize": "0.75em",
                            "marginTop": "12px", "opacity": "0.6"},
                 ),
@@ -715,11 +671,9 @@ def build_app() -> Any:
                         ]),
                         # Progress stages
                         html.Div([
-                            html.Div("\u2022 Round 1: First positions stated", style={
+                            html.Div("\u2022 Round 1: Two agents state their positions", style={
                                 "color": MUTED, "fontSize": "0.8em", "margin": "4px 0"}),
-                            html.Div("\u2022 Round 2: Agents challenge each other", style={
-                                "color": MUTED, "fontSize": "0.8em", "margin": "4px 0"}),
-                            html.Div("\u2022 Round 3: God-mode twist injected", style={
+                            html.Div("\u2022 Round 2: Two more agents challenge them by name", style={
                                 "color": MUTED, "fontSize": "0.8em", "margin": "4px 0"}),
                             html.Div("\u2022 Synthesis: Kevin connects the threads", style={
                                 "color": MUTED, "fontSize": "0.8em", "margin": "4px 0"}),
