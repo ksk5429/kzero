@@ -101,6 +101,33 @@ def _card_style(extra: dict | None = None) -> dict:
 # ---------------------------------------------------------------------------
 
 
+def _extract_question_from_transcript(transcript_path: Path) -> str | None:
+    """Extract the actual question from the transcript's opening message."""
+    try:
+        with transcript_path.open("r", encoding="utf-8") as f:
+            transcript = json.load(f)
+        for entry in transcript[:5]:
+            if entry.get("type") in ("moderator", "god_mode") and len(entry.get("text", "")) > 30:
+                text = entry["text"]
+                # Find LAST question mark in first 300 chars (the main question)
+                search_range = text[:300]
+                idx = search_range.rfind("?")
+                if idx > 0:
+                    # Find sentence start
+                    start = max(text.rfind(".", 0, idx), text.rfind(":", 0, idx))
+                    start = start + 1 if start > 0 else 0
+                    q = text[start:idx + 1].strip()
+                    # Clean up common prefixes
+                    for prefix in ["The question is", "The question"]:
+                        if q.lower().startswith(prefix.lower()):
+                            q = q[len(prefix):].lstrip(": ")
+                    return q
+                return text[:120]
+    except Exception:
+        pass
+    return None
+
+
 def _scan_analyses() -> list[dict[str, Any]]:
     """Return metadata dicts for every *_analysis.json, newest first."""
     results: list[dict[str, Any]] = []
@@ -111,11 +138,18 @@ def _scan_analyses() -> list[dict[str, Any]]:
             with p.open("r", encoding="utf-8") as f:
                 data = json.load(f)
             meta = data.get("metadata", {})
+
+            # Try to get actual question from transcript
+            slug = p.stem.replace("_analysis", "")
+            transcript_path = TRANSCRIPTS_DIR / f"{slug}.json"
+            question = _extract_question_from_transcript(transcript_path)
+            title = question or meta.get("scenario_title", p.stem)
+
             results.append({
                 "path": str(p),
                 "filename": p.name,
-                "slug": p.stem.replace("_analysis", ""),
-                "title": meta.get("scenario_title", p.stem),
+                "slug": slug,
+                "title": title,
                 "model": meta.get("model", "unknown"),
                 "rounds": meta.get("total_rounds", 0),
                 "messages": meta.get("total_messages", 0),
