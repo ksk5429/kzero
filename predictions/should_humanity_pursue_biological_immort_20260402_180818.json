@@ -1,0 +1,40 @@
+{
+  "question": "Should humanity pursue biological immortality?",
+  "n_runs": 3,
+  "question_type": "LEANING",
+  "question_description": "The council leans FOR but with significant dissent.",
+  "prediction_distribution": {
+    "AGAINST": 1,
+    "FOR": 2
+  },
+  "dominant_prediction": "FOR",
+  "dominance_pct": 0.667,
+  "score_distribution": {
+    "strong_against": 0,
+    "against": 1,
+    "neutral": 0,
+    "for": 2,
+    "strong_for": 0
+  },
+  "avg_score_mean": 0.231,
+  "avg_confidence": 0.649,
+  "convergence_trends": {
+    "DIVERGING": 2,
+    "CONVERGING": 1
+  },
+  "agent_stability": {
+    "Steve Jobs": {
+      "mean_score": 0.0,
+      "variance": 0.64,
+      "stable": false,
+      "consistent_side": "SWINGS"
+    },
+    "Bryan Johnson": {
+      "mean_score": 0.433,
+      "variance": 0.1089,
+      "stable": false,
+      "consistent_side": "FOR"
+    }
+  },
+  "timestamp": "2026-04-02T18:08:18.268950"
+}
