@@ -26,6 +26,7 @@ short_description: 8 minds. 1 question. Infinite consequences.
 ![Python](https://img.shields.io/badge/python-3.11+-blue?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 ![Cost](https://img.shields.io/badge/cost-%240-brightgreen?style=flat-square)
+[![PyPI](https://img.shields.io/pypi/v/the-council?style=flat-square&color=orange)](https://pypi.org/project/the-council/)
 ![Stars](https://img.shields.io/github/stars/ksk5429/kzero?style=flat-square)
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97-Live%20Demo-yellow?style=flat-square)](https://huggingface.co/spaces/kyeongsun/kzero)
 
@@ -50,6 +51,10 @@ short_description: 8 minds. 1 question. Infinite consequences.
 ## Quick Start
 
 ```bash
+# Option A: Install from PyPI
+pip install the-council
+
+# Option B: Clone for full access (characters, scenarios, everything)
 git clone https://github.com/ksk5429/kzero.git && cd kzero
 pip install -r requirements.txt
 ```
