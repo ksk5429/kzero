@@ -263,9 +263,14 @@ _sim_done = False
 _sim_error = ""
 
 
-def _run_council_thread(question: str):
-    """Run full council deliberation in a background thread.
-    Messages are appended to _sim_messages in real-time.
+def _run_council_thread(question: str, n_steps: int = 3):
+    """Run multi-step evolving deliberation in a background thread.
+
+    Each STEP = one full Hegelian dialectic (4 rounds, all agents).
+    Between steps, agents carry forward their revised positions.
+    Thoughts compound and evolve across steps.
+
+    Messages are appended to _sim_messages in real-time for streaming.
     """
     global _sim_messages, _sim_running, _sim_done, _sim_error
     _sim_messages = []
@@ -318,97 +323,127 @@ def _run_council_thread(question: str):
                 _add(name, f"[Error: {str(e)[:100]}]", round_num, "system", phase)
 
         # ================================================================
-        # HEGELIAN DIALECTIC — ALL agents speak EVERY round
+        # MULTI-STEP HEGELIAN DIALECTIC
+        # Each step = THESIS -> ANTITHESIS -> SYNTHESIS -> REVISION
+        # Positions carry forward. Thoughts compound across steps.
         # ================================================================
 
-        all_agents = list(agent_names)  # All 7 non-Kevin agents
-        random.shuffle(all_agents)
+        all_agents = list(agent_names)
+        positions: dict[str, str] = {}
+        round_counter = 0
 
-        _add("[K-ZERO]",
-             f"Council, the question is: \"{question}\"\n\n"
-             "We follow the dialectic. Every member speaks each round. "
-             "Positions must EVOLVE through the process.",
-             0, "moderator")
+        god_twists = [
+            "What if the question itself is wrong? What is the REAL question?",
+            "Assume your position is completely wrong. What changes?",
+            "If only ONE idea from this debate survives, which should it be?",
+            "200 years from now, which side will history vindicate?",
+            "What would a child say that none of you have considered?",
+        ]
 
-        # === ROUND 1: THESIS — ALL agents state initial positions ===
-        _add("[K-ZERO]",
-             "ROUND 1 \u2014 THESIS: Each of you, state your position. "
-             "Be direct. Take a clear stance in 2-3 sentences.",
-             1, "moderator", "THESIS")
+        for step in range(1, n_steps + 1):
+            random.shuffle(all_agents)
 
-        for name in all_agents:
-            _agent_speak(name,
-                f"The question: \"{question}\". "
-                f"State your position clearly. Take a definitive stance.",
-                1, "THESIS", max_tok=200)
+            # --- Step header ---
+            if step == 1:
+                _add("[K-ZERO]",
+                     f"\u2501\u2501\u2501 THE COUNCIL CONVENES \u2501\u2501\u2501\n"
+                     f"Question: \"{question}\"\n"
+                     f"Evolution Steps: {n_steps} | Agents: {len(all_agents)}\n"
+                     f"Each step: THESIS \u2192 ANTITHESIS \u2192 SYNTHESIS \u2192 REVISION",
+                     round_counter, "moderator")
+            else:
+                _add("[K-ZERO]",
+                     f"\u2501\u2501\u2501 EVOLUTION STEP {step}/{n_steps} \u2501\u2501\u2501\n"
+                     f"Positions from Step {step-1} are carried forward. The dialectic deepens.",
+                     round_counter, "moderator")
 
-        # === ROUND 2: ANTITHESIS — ALL agents challenge someone ===
-        _add("[K-ZERO]",
-             "ROUND 2 \u2014 ANTITHESIS: Everyone has spoken. "
-             "Now challenge the position you disagree with MOST. Name the person.",
-             2, "moderator", "ANTITHESIS")
+            # --- THESIS: ALL agents ---
+            round_counter += 1
+            thesis_label = f"S{step} THESIS"
+            _add("[K-ZERO]",
+                 f"Step {step} \u2014 THESIS: State your position." +
+                 (" Your previous position is known \u2014 has your thinking evolved?" if step > 1 else ""),
+                 round_counter, "moderator", thesis_label)
 
-        random.shuffle(all_agents)
-        for name in all_agents:
-            _agent_speak(name,
-                f"The question: \"{question}\". "
-                f"You heard everyone. Which argument is WEAKEST? "
-                f"Name the person. Quote their claim. Challenge it.",
-                2, "ANTITHESIS", max_tok=200)
+            for name in all_agents:
+                prev = positions.get(name, "")
+                ctx = f" Your position last step: \"{prev[:120]}\"." if prev else ""
+                _agent_speak(name,
+                    f"Question: \"{question}\".{ctx} State your current position.",
+                    round_counter, thesis_label, max_tok=200)
 
-        # === ROUND 3: SYNTHESIS — ALL agents reflect ===
-        _add("[K-ZERO]",
-             "ROUND 3 \u2014 SYNTHESIS: You've attacked each other. "
-             "Now REFLECT. What tension exists between your view and the "
-             "strongest counter-argument? Can both be true?",
-             3, "moderator", "SYNTHESIS")
+            # --- ANTITHESIS: ALL agents ---
+            round_counter += 1
+            anti_label = f"S{step} ANTITHESIS"
+            _add("[K-ZERO]",
+                 f"Step {step} \u2014 ANTITHESIS: Challenge the WEAKEST argument. Name them.",
+                 round_counter, "moderator", anti_label)
 
-        random.shuffle(all_agents)
-        for name in all_agents:
-            _agent_speak(name,
-                f"The question: \"{question}\". "
-                f"Reflect on the tension between your position and the "
-                f"strongest challenge. What might you be wrong about?",
-                3, "SYNTHESIS", max_tok=200)
+            random.shuffle(all_agents)
+            for name in all_agents:
+                _agent_speak(name,
+                    f"Question: \"{question}\". "
+                    f"Which argument is weakest? Name the person. Dismantle it.",
+                    round_counter, anti_label, max_tok=200)
 
-        # === GOD-MODE TWIST ===
-        _add("[GOD]",
-             "TWIST: What if the question itself is wrong? "
-             "What is the REAL question behind this question?",
-             4, "god_mode")
+            # --- SYNTHESIS: ALL agents ---
+            round_counter += 1
+            synth_label = f"S{step} SYNTHESIS"
+            _add("[K-ZERO]",
+                 f"Step {step} \u2014 SYNTHESIS: Reflect. What tension exists? What are you NOT seeing?",
+                 round_counter, "moderator", synth_label)
 
-        # === ROUND 4: REVISION — ALL agents revise ===
-        _add("[K-ZERO]",
-             "ROUND 4 \u2014 REVISION: Given everything \u2014 theses, attacks, "
-             "reflections, and the twist \u2014 state your FINAL position. "
-             "Has it changed? If so, why? If not, why did nothing convince you?",
-             4, "moderator", "REVISION")
+            random.shuffle(all_agents)
+            for name in all_agents:
+                _agent_speak(name,
+                    f"Question: \"{question}\". "
+                    f"Reflect on the tension between your view and the strongest challenge.",
+                    round_counter, synth_label, max_tok=200)
 
-        random.shuffle(all_agents)
-        for name in all_agents:
-            _agent_speak(name,
-                f"The question: \"{question}\". "
-                f"After the full dialectic: state your REVISED position. "
-                f"If changed, own it and explain why. If held firm, explain why.",
-                4, "REVISION", max_tok=200)
+            # --- GOD twist (every step) ---
+            round_counter += 1
+            _add("[GOD]", random.choice(god_twists), round_counter, "god_mode")
 
-        # === KEVIN SYNTHESIS ===
+            # --- REVISION: ALL agents ---
+            round_counter += 1
+            rev_label = f"S{step} REVISION"
+            _add("[K-ZERO]",
+                 f"Step {step} \u2014 REVISION: State your REVISED position. "
+                 f"This carries into Step {step+1}." if step < n_steps else
+                 f"Step {step} \u2014 FINAL REVISION: State your ultimate position.",
+                 round_counter, "moderator", rev_label)
+
+            random.shuffle(all_agents)
+            for name in all_agents:
+                prev = positions.get(name, "")
+                ctx = f" Previous: \"{prev[:120]}\"." if prev else ""
+                _agent_speak(name,
+                    f"Question: \"{question}\".{ctx} "
+                    f"State your REVISED position. If changed, explain why.",
+                    round_counter, rev_label, max_tok=200)
+
+            # Extract positions for next step
+            for msg in _sim_messages:
+                if msg.get("phase") == rev_label and msg["type"] == "agent":
+                    positions[msg["speaker"]] = msg["text"][:200]
+
+        # === KEVIN: FINAL SYNTHESIS across ALL steps ===
         kevin = agents.get("Kevin (\uae40\uacbd\uc120)")
         if kevin:
             try:
                 synthesis = kevin.respond(history,
                     current_topic=(
-                        "Synthesize the DIALECTIC. "
-                        "Who started where (thesis)? Who attacked whom (antithesis)? "
-                        "What tensions were acknowledged (synthesis)? "
-                        "Who CHANGED their position in revision and who held firm? "
-                        "What emerged that NO ONE held at the start? "
-                        "End with the ONE unanswered question."),
-                    max_tokens=400)
+                        f"Synthesize the FULL {n_steps}-step evolution. "
+                        f"How did each mind change from Step 1 to Step {n_steps}? "
+                        f"Who evolved the most? Who held firm? "
+                        f"What truth emerged that did NOT exist at the start? "
+                        f"End with the ONE question the council cannot answer."),
+                    max_tokens=500)
                 if synthesis and not synthesis.startswith("["):
-                    _add("Kevin (\uae40\uacbd\uc120)", synthesis, 5, "moderator", "FINAL SYNTHESIS")
+                    _add("Kevin (\uae40\uacbd\uc120)", synthesis, round_counter + 1,
+                         "moderator", "FINAL SYNTHESIS")
             except Exception as e:
-                _add("Kevin (\uae40\uacbd\uc120)", f"[Synthesis error: {e}]", 5, "system")
+                _add("Kevin (\uae40\uacbd\uc120)", f"[Error: {e}]", round_counter + 1, "system")
 
     except Exception as e:
         _sim_error = str(e)
@@ -599,8 +634,28 @@ def build_app() -> Any:
                 ], style={"textAlign": "center", "marginTop": "14px", "maxWidth": "680px",
                           "margin": "14px auto 0"}),
 
-                # Big CTA button
-                html.Div([
+                # Evolution steps selector + CTA button
+                html.Div(style={"textAlign": "center", "marginTop": "24px",
+                                "display": "flex", "justifyContent": "center",
+                                "alignItems": "center", "gap": "16px"}, children=[
+                    html.Div(style={"display": "flex", "alignItems": "center", "gap": "8px"}, children=[
+                        html.Span("Steps:", style={"color": MUTED, "fontSize": "0.85em"}),
+                        dcc.Dropdown(
+                            id="step-selector",
+                            options=[
+                                {"label": "1 step (quick)", "value": 1},
+                                {"label": "2 steps", "value": 2},
+                                {"label": "3 steps (default)", "value": 3},
+                                {"label": "5 steps (deep)", "value": 5},
+                            ],
+                            value=3,
+                            clearable=False,
+                            style={
+                                "width": "160px", "backgroundColor": "#0d1117",
+                                "color": TEXT, "border": "none",
+                            },
+                        ),
+                    ]),
                     html.Button([
                         html.Span("\u26A1 ", style={"fontSize": "1.1em"}),
                         html.Span("Ask the Council"),
@@ -619,14 +674,12 @@ def build_app() -> Any:
                             "fontFamily": "inherit",
                             "letterSpacing": "0.02em",
                             "boxShadow": f"0 4px 20px rgba(243, 156, 18, 0.3)",
-                            "transition": "all 0.2s",
                         },
                     ),
-                ], style={"textAlign": "center", "marginTop": "24px"}),
+                ]),
 
-                # Subtitle under button
                 html.P(
-                    "Powered by Groq (free) \u00b7 2 rounds + synthesis \u00b7 5 agent responses \u00b7 ~20 seconds",
+                    "Each step: THESIS \u2192 ANTITHESIS \u2192 SYNTHESIS \u2192 REVISION \u00b7 7 agents per round \u00b7 Positions evolve between steps",
                     style={"color": MUTED, "textAlign": "center", "fontSize": "0.75em",
                            "marginTop": "12px", "opacity": "0.6"},
                 ),
@@ -730,9 +783,10 @@ def build_app() -> Any:
         Input("run-btn", "n_clicks"),
         State("question-input", "value"),
         State("sim-timestamp", "data"),
+        State("step-selector", "value"),
         prevent_initial_call=True,
     )
-    def start_simulation(n_clicks, question, last_ts):
+    def start_simulation(n_clicks, question, last_ts, n_steps):
         global _sim_running
         if not n_clicks or not question or not question.strip():
             return html.Div("Please type a question first.",
@@ -753,7 +807,8 @@ def build_app() -> Any:
                            style={"color": GOLD, "fontSize": "0.9em"}), no_update, False, 0
 
         # Launch simulation in background thread
-        t = threading.Thread(target=_run_council_thread, args=(question.strip(),), daemon=True)
+        steps = int(n_steps) if n_steps else 3
+        t = threading.Thread(target=_run_council_thread, args=(question.strip(), steps), daemon=True)
         t.start()
 
         return html.Div([
