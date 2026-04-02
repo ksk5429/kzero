@@ -27,6 +27,60 @@ Musk argues with Sartre about free will. Feynman calls bullshit on Johnson's imm
 
 ---
 
+## Try It Now
+
+| Method | Link | What You Get |
+|--------|------|-------------|
+| **Kaggle Notebook** | [Open in Kaggle](https://kaggle.com/) | Run the full simulation in your browser. Zero setup. |
+| **Local (recommended)** | See Quick Start below | K-ZERO Console + Dash Dashboard + Full control |
+
+### Local Quick Play (3 minutes)
+
+```bash
+git clone https://github.com/ksk5429/kzero.git && cd kzero
+pip install -r requirements.txt
+```
+
+Get a free API key from [console.groq.com](https://console.groq.com) or [ai.google.dev](https://aistudio.google.com/apikey) (no credit card), then:
+
+```bash
+# Create .env with your free key
+echo 'LLM_API_KEY=your_key_here' > .env
+echo 'LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/' >> .env
+echo 'COUNCIL_MODEL=gemini-2.5-flash' >> .env
+
+# Option A: Watch 8 geniuses argue (automated)
+python -m runner.council_runner --rounds 5
+
+# Option B: YOU play God (interactive K-ZERO Console)
+python -m runner.demiurge
+
+# Option C: Analyze + Visualize a past session
+python -m runner.analyze transcripts/meaning_of_life_20260402_160855.json
+python -m runner.visualize transcripts/meaning_of_life_20260402_160855_analysis.json
+# Opens dashboard at http://localhost:8050
+```
+
+### K-ZERO Console Commands (Option B)
+```
+K-ZERO > What if humans could upload their consciousness to the cloud?
+         (type anything — the council reacts)
+
+K-ZERO > /ask feynman Does Bryan's immortality quest make any sense?
+         (whisper to one agent)
+
+K-ZERO > /mode oxford_debate
+         (switch to adversarial debate mode)
+
+K-ZERO > /vote Should humanity pursue immortality?
+         (force the council to vote YES or NO)
+
+K-ZERO > /end
+         (save transcript, get synthesis, exit)
+```
+
+---
+
 ## What is this?
 
 A multi-agent deliberation system where 8 AI personas — built from ~3,500 tokens of researched personality data each — argue existential questions using **any free OpenAI-compatible LLM**.
