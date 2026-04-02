@@ -1,0 +1,27 @@
+{
+  "id": "death_and_legacy",
+  "mode": "oxford_debate",
+  "team_for": ["Jobs", "Feynman", "Carlin"],
+  "team_against": ["Musk", "Johnson", "Kobe"],
+  "audience": ["Sartre", "Kevin"],
+  "title": "Death, Immortality, and What Remains",
+  "description": "Bryan Johnson wants to live forever. Jobs used death as his greatest teacher. Kobe died at 41. Sartre says we create ourselves through action. What is the relationship between death and a life well-lived?",
+  "opening_prompt": "Bryan Johnson believes death is no longer inevitable. Steve Jobs said remembering death is the most important tool he ever encountered. Kobe Bryant died in a helicopter crash at 41, having already written his legacy. The question: Is death the enemy, the teacher, or the point?",
+  "moderator_prompts": [
+    "Kevin asks: Bryan, you optimize to not die. Jobs, you said death clarifies. Can you both be right?",
+    "Kevin asks: Kobe, you played on fractured bones and torn Achilles. Were you defying death or accepting it?",
+    "Kevin asks: Sartre, 'existence precedes essence' — but death ends existence. Does essence survive?",
+    "Kevin asks: Musk, you want humanity to be multiplanetary to hedge against extinction. Is that about individual death or species death?",
+    "Kevin asks: Carlin, you said 'fuck hope.' What do you say to someone who just lost someone they love?"
+  ],
+  "god_mode_injection": {
+    "mid_discussion": "INJECTION: Medical science has just achieved biological immortality. It costs $10M per person per year. Only 1,000 people on Earth can afford it. Who should get it?",
+    "late_discussion": "INJECTION: Each council member is told they have exactly 24 hours to live. What do you do with the time?"
+  },
+  "expected_tensions": [
+    "Johnson (death is the enemy) vs Jobs (death is the teacher)",
+    "Musk (species survival) vs Sartre (individual authenticity)",
+    "Kobe (legacy through craft) vs Carlin (legacy is vanity)",
+    "Feynman (curiosity doesn't need immortality) vs Johnson (more time = more discovery)"
+  ]
+}

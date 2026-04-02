@@ -1,0 +1,220 @@
+{
+  "_meta": {
+    "description": "Discussion mode templates. Every deliberation is defined by 4 parameters: objective, termination, interaction, and scoring. These compose into any discussion type.",
+    "parameters": {
+      "objective": "What does 'winning' mean? (consensus | adversarial | exploratory | evaluative | generative)",
+      "termination": "When is it done? (binary | multiple_choice | ranked | open_synthesis | threshold)",
+      "interaction": "How do agents engage? (free_for_all | structured_turns | adversarial_pairs | devils_advocate | delphi | socratic)",
+      "scoring": "How is output evaluated? (vote_count | argument_quality | persuasion | novelty | none)"
+    }
+  },
+
+  "modes": {
+    "philosophical_seminar": {
+      "name": "Philosophical Seminar",
+      "emoji": "🏛️",
+      "description": "Open-ended exploration of deep questions. No winner, no vote — the goal is depth of insight. The moderator guides, not judges.",
+      "objective": "exploratory",
+      "termination": {
+        "type": "open_synthesis",
+        "max_rounds": 20,
+        "synthesis_by": "moderator"
+      },
+      "interaction": {
+        "type": "structured_turns",
+        "speakers_per_round": 2,
+        "moderator_injects": true,
+        "challenge_encouraged": true,
+        "building_on_others": true
+      },
+      "scoring": {
+        "type": "none",
+        "output": "synthesis_narrative"
+      },
+      "system_instruction": "This is a philosophical seminar. There is no winner. Your goal is to explore the question deeply, challenge assumptions, and build on others' ideas. Disagree genuinely when you disagree. The value is in the exploration, not the conclusion.",
+      "best_for": "Existential questions, meaning-of-life debates, 'what if' scenarios"
+    },
+
+    "oxford_debate": {
+      "name": "Oxford Debate",
+      "emoji": "⚔️",
+      "description": "Formal adversarial debate. Two sides argue for and against a proposition. Audience (remaining agents) votes at the end. Winner is the side that persuades more.",
+      "objective": "adversarial",
+      "termination": {
+        "type": "binary",
+        "proposition": null,
+        "vote_after_rounds": true
+      },
+      "interaction": {
+        "type": "adversarial_pairs",
+        "team_for": [],
+        "team_against": [],
+        "audience": [],
+        "speakers_per_round": 2,
+        "cross_examination": true,
+        "opening_statements": true,
+        "closing_statements": true
+      },
+      "scoring": {
+        "type": "vote_count",
+        "voters": "audience",
+        "output": "winner_declaration"
+      },
+      "system_instruction": "This is a formal Oxford-style debate. You have been assigned to argue {side}. You MUST argue this position convincingly even if you personally disagree. Your goal is to PERSUADE the audience, not to find truth. Use rhetoric, evidence, emotional appeals — whatever works. Attack your opponent's weakest points.",
+      "best_for": "Binary questions: 'Should AI be regulated?', 'Is immortality desirable?', 'Should we colonize Mars?'"
+    },
+
+    "yes_no_vote": {
+      "name": "Yes/No Decision",
+      "emoji": "🗳️",
+      "description": "The council must reach a binary decision. Each member argues their position, then all vote. Simple majority wins. Abstention is not allowed.",
+      "objective": "evaluative",
+      "termination": {
+        "type": "binary",
+        "force_vote": true,
+        "vote_after_rounds": true
+      },
+      "interaction": {
+        "type": "free_for_all",
+        "speakers_per_round": 3,
+        "moderator_injects": true,
+        "persuasion_allowed": true
+      },
+      "scoring": {
+        "type": "vote_count",
+        "voters": "all",
+        "output": "vote_tally"
+      },
+      "system_instruction": "The council must reach a YES or NO decision on the question posed. Argue your genuine position. Try to persuade others. At the end, you will cast a binding vote — YES or NO. No abstention. No 'it depends.' Pick a side.",
+      "best_for": "Decision-making: 'Should we deploy the AI?', 'Should humans pursue immortality?', 'Is this project worth funding?'"
+    },
+
+    "multiple_choice": {
+      "name": "Multiple Choice Evaluation",
+      "emoji": "📋",
+      "description": "The council evaluates several predefined options and must pick one. Discussion explores trade-offs of each option. Final vote selects the winner.",
+      "objective": "evaluative",
+      "termination": {
+        "type": "multiple_choice",
+        "options": [],
+        "vote_after_rounds": true
+      },
+      "interaction": {
+        "type": "structured_turns",
+        "speakers_per_round": 2,
+        "option_advocacy": true,
+        "moderator_injects": true
+      },
+      "scoring": {
+        "type": "vote_count",
+        "voters": "all",
+        "output": "ranked_options"
+      },
+      "system_instruction": "The council must evaluate the following options and select the best one:\n{options}\nDiscuss the trade-offs of each option. You may advocate for your preferred option and critique others. At the end, you will rank all options. Be specific about WHY you prefer one over another.",
+      "best_for": "Strategy decisions: 'Which approach should we take?', 'Where should we invest?', 'Which technology should we bet on?'"
+    },
+
+    "brainstorm": {
+      "name": "Brainstorm",
+      "emoji": "💡",
+      "description": "Pure idea generation. No criticism in early rounds (yes-and only). Criticism and filtering in later rounds. Goal: maximize novel, actionable ideas.",
+      "objective": "generative",
+      "termination": {
+        "type": "open_synthesis",
+        "max_rounds": 15,
+        "diverge_rounds_pct": 0.6,
+        "converge_rounds_pct": 0.4
+      },
+      "interaction": {
+        "type": "free_for_all",
+        "speakers_per_round": 3,
+        "no_criticism_phase": true,
+        "building_required": true,
+        "wild_ideas_encouraged": true
+      },
+      "scoring": {
+        "type": "novelty",
+        "output": "idea_list_ranked"
+      },
+      "system_instruction_diverge": "BRAINSTORM MODE — DIVERGE PHASE. Your only job is to generate ideas. Build on others' ideas with 'Yes, and...' — never 'No, but...'. The wilder the better. Combine unexpected elements. What if we did the opposite? What if we removed the constraint entirely? Quantity over quality right now.",
+      "system_instruction_converge": "BRAINSTORM MODE — CONVERGE PHASE. Now evaluate the ideas generated. Which are most promising? Which can be combined? Which should be killed? Be critical now — rank by feasibility and impact. Identify the top 3.",
+      "best_for": "Innovation: 'How might we solve X?', 'What product should we build?', 'How do we reach Mars faster?'"
+    },
+
+    "war_room": {
+      "name": "War Room",
+      "emoji": "🎯",
+      "description": "Crisis decision-making. One agent plays devil's advocate against the emerging consensus. Forces stress-testing of every plan. Fast rounds, high pressure.",
+      "objective": "evaluative",
+      "termination": {
+        "type": "threshold",
+        "agreement_pct": 0.75,
+        "max_rounds": 10
+      },
+      "interaction": {
+        "type": "devils_advocate",
+        "devils_advocate_agent": null,
+        "speakers_per_round": 3,
+        "time_pressure": true,
+        "moderator_injects": true
+      },
+      "scoring": {
+        "type": "argument_quality",
+        "judge": "moderator",
+        "output": "decision_with_risks"
+      },
+      "system_instruction": "WAR ROOM. This is a crisis. Time is short. One member has been designated devil's advocate — their job is to find EVERY flaw in the emerging plan. Everyone else: propose solutions, but be prepared to have them torn apart. We need a decision that survives the hardest challenge. No comfortable consensus allowed.",
+      "best_for": "Crisis management: 'The budget was cut 80%', 'The product launched and is failing', 'We have 24 hours to decide'"
+    },
+
+    "socratic_dialogue": {
+      "name": "Socratic Dialogue",
+      "emoji": "🤔",
+      "description": "One questioner (K-ZERO or moderator) interrogates one agent at a time through successive questions. Other agents observe and may comment. Goal: reach the deepest possible understanding through questioning alone.",
+      "objective": "exploratory",
+      "termination": {
+        "type": "open_synthesis",
+        "max_rounds": 15
+      },
+      "interaction": {
+        "type": "socratic",
+        "questioner": "moderator",
+        "current_subject": null,
+        "observers_may_comment": true,
+        "speakers_per_round": 1
+      },
+      "scoring": {
+        "type": "none",
+        "output": "depth_narrative"
+      },
+      "system_instruction_questioner": "You are Socrates. Your only tool is the question. Never state your own position. Only ask questions that expose contradictions, push deeper, or reveal hidden assumptions. When the subject thinks they've answered, ask 'But what about...?' The goal is not to defeat — it's to illuminate.",
+      "system_instruction_subject": "You are being questioned in a Socratic dialogue. Answer honestly. When you find a contradiction in your own reasoning, acknowledge it. Go deeper, not wider. The questioner is not your enemy — they are your mirror.",
+      "best_for": "Deep exploration of one agent's philosophy: 'Feynman, what do you really believe about responsibility?'"
+    },
+
+    "delphi_method": {
+      "name": "Delphi Method",
+      "emoji": "🔮",
+      "description": "Multi-round anonymous forecasting. Each agent gives their estimate independently, then sees the group distribution, then revises. Goal: convergence through structured revision, not social pressure.",
+      "objective": "consensus",
+      "termination": {
+        "type": "threshold",
+        "variance_threshold": 0.2,
+        "max_rounds": 5
+      },
+      "interaction": {
+        "type": "delphi",
+        "anonymous_rounds": true,
+        "reveal_distribution": true,
+        "speakers_per_round": 8
+      },
+      "scoring": {
+        "type": "none",
+        "output": "convergence_report"
+      },
+      "system_instruction_round1": "DELPHI METHOD — Round 1. Answer the question INDEPENDENTLY. Do not reference what others might think. Give your honest assessment with a confidence level (0-100%). State your reasoning briefly.",
+      "system_instruction_revision": "DELPHI METHOD — Revision Round. Here is the distribution of answers from the group (anonymized):\n{distribution}\nYour previous answer was: {your_answer}\nYou may revise your answer based on this information, or hold firm. Explain WHY you are changing or maintaining your position. Do not simply conform — only revise if the reasoning persuades you.",
+      "best_for": "Forecasting: 'When will AGI arrive?', 'What is the probability that X happens?', 'How should we allocate resources?'"
+    }
+  }
+}

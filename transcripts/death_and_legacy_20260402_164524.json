@@ -1,0 +1,107 @@
+[
+  {
+    "speaker": "[MODERATOR]",
+    "text": "Bryan Johnson believes death is no longer inevitable. Steve Jobs said remembering death is the most important tool he ever encountered. Kobe Bryant died in a helicopter crash at 41, having already written his legacy. The question: Is death the enemy, the teacher, or the point?",
+    "round": 0,
+    "timestamp": "2026-04-02T16:44:22.275901",
+    "type": "moderator"
+  },
+  {
+    "speaker": "Richard Feynman",
+    "text": "Huh. \"Enemy,\" \"teacher,\" or \"point.\" That's a funny way to put",
+    "round": 1,
+    "timestamp": "2026-04-02T16:44:26.924757",
+    "type": "agent"
+  },
+  {
+    "speaker": "Steve Jobs",
+    "text": "[Stares at Feynman for a moment, unblinking, letting the silence hang heavy. Then",
+    "round": 1,
+    "timestamp": "2026-04-02T16:44:31.032396",
+    "type": "agent"
+  },
+  {
+    "speaker": "[GOD_MODE]",
+    "text": "INJECTION: Medical science has just achieved biological immortality. It costs $10M per person per year. Only 1,000 people on Earth can afford it. Who should get it?",
+    "round": 2,
+    "timestamp": "2026-04-02T16:44:31.034397",
+    "type": "god_mode"
+  },
+  {
+    "speaker": "Kobe Bryant",
+    "text": "This is a simple question. Not about money. Not about who *can* afford it. That",
+    "round": 2,
+    "timestamp": "2026-04-02T16:44:34.912737",
+    "type": "agent"
+  },
+  {
+    "speaker": "Bryan Johnson",
+    "text": "This is the first true test. The origin point. Not \"who *should* get it",
+    "round": 2,
+    "timestamp": "2026-04-02T16:44:39.102400",
+    "type": "agent"
+  },
+  {
+    "speaker": "[MODERATOR]",
+    "text": "Kevin asks: Bryan, you optimize to not die. Jobs, you said death clarifies. Can you both be right?",
+    "round": 3,
+    "timestamp": "2026-04-02T16:44:39.104401",
+    "type": "moderator"
+  },
+  {
+    "speaker": "Steve Jobs",
+    "text": "[A long, unblinking stare, first at Bryan, then back to Kevin.]\n\nNo",
+    "round": 3,
+    "timestamp": "2026-04-02T16:44:43.334640",
+    "type": "agent"
+  },
+  {
+    "speaker": "Kobe Bryant",
+    "text": "[A nod towards Jobs, acknowledging his directness.]\n\nHe's right. No.",
+    "round": 3,
+    "timestamp": "2026-04-02T16:44:52.642944",
+    "type": "agent"
+  },
+  {
+    "speaker": "[GOD_MODE]",
+    "text": "INJECTION: Each council member is told they have exactly 24 hours to live. What do you do with the time?",
+    "round": 4,
+    "timestamp": "2026-04-02T16:44:52.642944",
+    "type": "god_mode"
+  },
+  {
+    "speaker": "George Carlin",
+    "text": "Twenty-four hours? *Finally*. It's about time. Always thought the waiting was the",
+    "round": 4,
+    "timestamp": "2026-04-02T16:45:02.444535",
+    "type": "agent"
+  },
+  {
+    "speaker": "Richard Feynman",
+    "text": "Twenty-four hours? Huh. Well, that's a problem with a definite boundary",
+    "round": 4,
+    "timestamp": "2026-04-02T16:45:06.647799",
+    "type": "agent"
+  },
+  {
+    "speaker": "Elon Musk",
+    "text": "Twenty-four hours. [Long pause. Stares into the distance, running calculations.]\n\n",
+    "round": 5,
+    "timestamp": "2026-04-02T16:45:14.935548",
+    "type": "agent"
+  },
+  {
+    "speaker": "George Carlin",
+    "text": "...The waiting was the hardest part. Now, the waiting's over. And you want to",
+    "round": 5,
+    "timestamp": "2026-04-02T16:45:19.113277",
+    "type": "agent"
+  },
+  {
+    "speaker": "[MODERATOR]",
+    "text": "This council started with a fundamental question about death: is it the enemy, the teacher, or the point? And as we explored that, it became",
+    "round": 5,
+    "timestamp": "2026-04-02T16:45:24.943434",
+    "type": "moderator"
+  }
+]

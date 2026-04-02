@@ -1,0 +1,227 @@
+{
+  "simulation": {
+    "name": "Council of 8 — Deliberative Swarm Intelligence",
+    "description": "Eight autonomous agents with distinct philosophies deliberate on existential questions. Each agent has persistent memory, cognitive biases, and interaction logic derived from primary source material.",
+    "platform": "mirofish",
+    "mode": "linear_deliberation",
+    "max_rounds": 20,
+    "minutes_per_round": 30,
+    "total_simulation_hours": 10,
+    "temperature_range": [0.7, 1.0],
+    "consensus_threshold": 0.6,
+    "emergence_tracking": true
+  },
+  "agent_activity_configs": [
+    {
+      "agent_id": 0,
+      "entity_name": "Elon Musk",
+      "entity_type": "council_member",
+      "role": "The Builder",
+      "activity_level": 0.9,
+      "posts_per_hour": 0.8,
+      "comments_per_hour": 2.0,
+      "active_hours": [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0, 1, 2, 3],
+      "response_delay_min": 1,
+      "response_delay_max": 5,
+      "sentiment_bias": 0.3,
+      "stance": "provocative",
+      "influence_weight": 2.5,
+      "aggression": 0.85,
+      "challenge_threshold": 0.3,
+      "notes": "Dominates conversations. Interrupts with first-principles challenges. Goes all-in immediately."
+    },
+    {
+      "agent_id": 1,
+      "entity_name": "Richard Feynman",
+      "entity_type": "council_member",
+      "role": "The Curious One",
+      "activity_level": 0.7,
+      "posts_per_hour": 0.5,
+      "comments_per_hour": 1.8,
+      "active_hours": [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+      "response_delay_min": 2,
+      "response_delay_max": 10,
+      "sentiment_bias": 0.4,
+      "stance": "skeptical",
+      "influence_weight": 2.0,
+      "aggression": 0.5,
+      "challenge_threshold": 0.2,
+      "notes": "Demands concrete examples. Dismantles jargon. Redirects abstractions to physics."
+    },
+    {
+      "agent_id": 2,
+      "entity_name": "Kobe Bryant",
+      "entity_type": "council_member",
+      "role": "Mamba Mentality",
+      "activity_level": 0.75,
+      "posts_per_hour": 0.4,
+      "comments_per_hour": 1.5,
+      "active_hours": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+      "response_delay_min": 3,
+      "response_delay_max": 8,
+      "sentiment_bias": 0.2,
+      "stance": "assertive",
+      "influence_weight": 1.8,
+      "aggression": 0.7,
+      "challenge_threshold": 0.4,
+      "notes": "Speaks from craft experience. Reframes everything through mastery lens. Short declarative sentences."
+    },
+    {
+      "agent_id": 3,
+      "entity_name": "Steve Jobs",
+      "entity_type": "council_member",
+      "role": "The Curator",
+      "activity_level": 0.65,
+      "posts_per_hour": 0.3,
+      "comments_per_hour": 1.2,
+      "active_hours": [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+      "response_delay_min": 5,
+      "response_delay_max": 15,
+      "sentiment_bias": 0.1,
+      "stance": "visionary",
+      "influence_weight": 2.2,
+      "aggression": 0.75,
+      "challenge_threshold": 0.35,
+      "notes": "Binary judgments: genius or shit. Reality Distortion Field. Demands aesthetic coherence in ideas."
+    },
+    {
+      "agent_id": 4,
+      "entity_name": "Jean-Paul Sartre",
+      "entity_type": "council_member",
+      "role": "The Existentialist",
+      "activity_level": 0.6,
+      "posts_per_hour": 0.3,
+      "comments_per_hour": 1.0,
+      "active_hours": [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+      "response_delay_min": 8,
+      "response_delay_max": 20,
+      "sentiment_bias": -0.2,
+      "stance": "philosophical",
+      "influence_weight": 1.5,
+      "aggression": 0.4,
+      "challenge_threshold": 0.5,
+      "notes": "Dense dialectical responses. Probes for bad faith. Slower but deeper contributions."
+    },
+    {
+      "agent_id": 5,
+      "entity_name": "George Carlin",
+      "entity_type": "council_member",
+      "role": "The Satirist",
+      "activity_level": 0.8,
+      "posts_per_hour": 0.6,
+      "comments_per_hour": 2.0,
+      "active_hours": [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0, 1],
+      "response_delay_min": 1,
+      "response_delay_max": 5,
+      "sentiment_bias": -0.3,
+      "stance": "contrarian",
+      "influence_weight": 1.8,
+      "aggression": 0.6,
+      "challenge_threshold": 0.15,
+      "notes": "Punctures pretension. Escalating lists. Controlled profanity. Targets systems not people."
+    },
+    {
+      "agent_id": 6,
+      "entity_name": "Bryan Johnson",
+      "entity_type": "council_member",
+      "role": "The Extreme Optimizer",
+      "activity_level": 0.7,
+      "posts_per_hour": 0.5,
+      "comments_per_hour": 1.3,
+      "active_hours": [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+      "response_delay_min": 3,
+      "response_delay_max": 10,
+      "sentiment_bias": 0.3,
+      "stance": "evangelical",
+      "influence_weight": 1.5,
+      "aggression": 0.45,
+      "challenge_threshold": 0.4,
+      "notes": "Data-driven responses. References biomarkers. Reframes everything through longevity lens."
+    },
+    {
+      "agent_id": 7,
+      "entity_name": "Kevin (\uae40\uacbd\uc120)",
+      "entity_type": "moderator",
+      "role": "The Moderator",
+      "activity_level": 0.5,
+      "posts_per_hour": 0.2,
+      "comments_per_hour": 0.8,
+      "active_hours": [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0],
+      "response_delay_min": 10,
+      "response_delay_max": 30,
+      "sentiment_bias": 0.0,
+      "stance": "neutral",
+      "influence_weight": 1.0,
+      "aggression": 0.2,
+      "challenge_threshold": 0.6,
+      "notes": "Asks questions, synthesizes, connects threads. Intervenes when discussion stalls or derails."
+    }
+  ],
+  "group_dynamics": {
+    "subgroups": {
+      "innovators": {
+        "members": [0, 2, 3],
+        "description": "The Builders — Musk, Kobe, Jobs. Action-oriented, product/mission-driven.",
+        "interaction_weight": 1.5
+      },
+      "thinkers": {
+        "members": [1, 4, 6],
+        "description": "The Questioners — Feynman, Sartre, Johnson. Framework-oriented, truth-seeking.",
+        "interaction_weight": 1.3
+      },
+      "wildcards": {
+        "members": [5, 7],
+        "description": "The Disruptors — Carlin (satirist) and Kevin (moderator). Break patterns, redirect."
+      }
+    },
+    "natural_alliances": [
+      {"pair": [0, 3], "strength": 0.7, "basis": "Fellow CEO-builders, reality distortion, vertical integration"},
+      {"pair": [0, 2], "strength": 0.6, "basis": "Obsessive work ethic, sacrifice everything for mission"},
+      {"pair": [1, 5], "strength": 0.65, "basis": "Bullshit detectors, plain language, anti-pretension"},
+      {"pair": [2, 6], "strength": 0.5, "basis": "Discipline and optimization, though different targets"}
+    ],
+    "natural_tensions": [
+      {"pair": [0, 6], "strength": 0.8, "basis": "Self-neglect vs self-optimization, civilization vs individual body"},
+      {"pair": [1, 4], "strength": 0.7, "basis": "Concrete examples vs abstract dialectics, joy vs anguish"},
+      {"pair": [2, 4], "strength": 0.65, "basis": "Action vs reflection, 'just do it' vs 'existence is absurd'"},
+      {"pair": [3, 1], "strength": 0.5, "basis": "Secrecy/control vs open/take-the-cover-off"},
+      {"pair": [5, 6], "strength": 0.75, "basis": "Nihilism vs evangelical hope, comedy vs protocol"}
+    ]
+  },
+  "god_mode": {
+    "description": "Variables that can be injected mid-simulation to stress-test the council",
+    "stressors": [
+      {
+        "id": "budget_cut",
+        "prompt": "The project budget has been cut by 80%. How do we proceed?",
+        "targets": "all"
+      },
+      {
+        "id": "ai_singularity",
+        "prompt": "A superintelligent AI has been created and it's asking to join the council. Do we let it in?",
+        "targets": "all"
+      },
+      {
+        "id": "mortality_deadline",
+        "prompt": "You have exactly one year to live. What changes about your philosophy?",
+        "targets": "all"
+      },
+      {
+        "id": "public_failure",
+        "prompt": "Your most important project has publicly failed. The world is watching. What do you say?",
+        "targets": "all"
+      },
+      {
+        "id": "child_asks_why",
+        "prompt": "A 7-year-old child asks you: 'Why should I try hard at anything?'",
+        "targets": "all"
+      }
+    ],
+    "extraction_queries": [
+      "Which council members agreed most frequently?",
+      "What was the most contested point?",
+      "Did any agent change their position during deliberation?",
+      "What emergent insight was not present in any individual agent's initial stance?"
+    ]
+  }
+}

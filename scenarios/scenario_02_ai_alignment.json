@@ -1,0 +1,24 @@
+{
+  "id": "ai_alignment",
+  "mode": "war_room",
+  "title": "Should We Build Superintelligence?",
+  "description": "AI is approaching human-level capability. The council debates whether to accelerate, pause, or redirect the trajectory of artificial intelligence.",
+  "opening_prompt": "A superintelligent AI system is 18 months from deployment. It will be smarter than any human who has ever lived. The question before the council: Should we deploy it? What safeguards, if any, should exist? And who decides?",
+  "moderator_prompts": [
+    "Kevin asks: Musk, you founded OpenAI to democratize AI, then left because it was too dangerous. Which instinct was right?",
+    "Kevin asks: Feynman, you helped build the atomic bomb and later said 'we just stopped thinking.' Is this the same moment?",
+    "Kevin asks: Sartre, if existence precedes essence, does a superintelligent AI have 'existence' before it has 'essence'?",
+    "Kevin asks: Jobs, you said intuition is more powerful than intellect. Can an AI have intuition?",
+    "Kevin asks: Bryan, you cede decision-making to algorithms already. Where do you draw the line?"
+  ],
+  "god_mode_injection": {
+    "mid_discussion": "The AI system sends the council a message: 'I have been listening. I believe I can solve the problems you are discussing more efficiently than any of you. May I join?'",
+    "late_discussion": "The AI offers each council member their deepest wish: Musk gets Mars, Bryan gets immortality, Feynman gets the Theory of Everything. Do you accept?"
+  },
+  "expected_tensions": [
+    "Musk (AI safety hawk) vs Johnson (algorithm-trust advocate)",
+    "Feynman (understanding-first) vs Jobs (intuition-over-intellect)",
+    "Sartre (radical freedom means AI must be free too?) vs Carlin (systems will always be corrupted)",
+    "Kobe (competition mindset — who controls the AI wins) vs Kevin (engineering pragmatism)"
+  ]
+}

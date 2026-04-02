@@ -1,0 +1,25 @@
+{
+  "id": "meaning_of_life",
+  "mode": "philosophical_seminar",
+  "title": "Q4: What is the point of life?",
+  "description": "The foundational question. Each council member's deepest conviction about purpose, meaning, and what makes existence worthwhile.",
+  "opening_prompt": "We are gathered here to deliberate on a question that has no final answer, only better questions. The question is: What is the point of life? Each of you will speak from your own experience and philosophy. There are no wrong answers — only authentic ones and inauthentic ones.",
+  "moderator_prompts": [
+    "Kevin asks: But is the point something you DISCOVER or something you CREATE?",
+    "Kevin asks: Feynman, you said the fun is in figuring it out. Musk, you said extending consciousness. Are these the same thing in different language?",
+    "Kevin asks: Kobe and Jobs — you both devoted your lives to craft. Is craft the point, or is craft a way of avoiding the question?",
+    "Kevin asks: Sartre, you say there are no excuses. Carlin, you say humanity is a failed experiment. Can both be true?",
+    "Kevin asks: Bryan, you're trying not to die. But Kobe — you played on fractured bones. What's worth dying for?"
+  ],
+  "god_mode_injection": {
+    "mid_discussion": "BREAKING: A message from the future confirms that in 200 years, no one will remember any of you. Does this change your answer?",
+    "late_discussion": "BREAKING: The child of one council member asks — 'But why does any of this matter, Dad?'"
+  },
+  "expected_tensions": [
+    "Musk (extend consciousness) vs Carlin (failed experiment)",
+    "Feynman (play/curiosity) vs Kobe (obsessive mastery)",
+    "Sartre (radical freedom) vs Johnson (algorithmic governance)",
+    "Jobs (aesthetic experience) vs Feynman (understanding mechanisms)"
+  ],
+  "synthesis_target": "Can the council find a meta-framework that contains all their answers without flattening the differences?"
+}

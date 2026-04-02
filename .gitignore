@@ -1,0 +1,22 @@
+# Secrets
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# MiroFish clone (local reference only)
+mirofish/
+
+# Source book extracts (copyrighted, not for public distribution)
+characters/*/sources/
+sources/
+
+# Generated outputs (keep sample transcripts checked in)
+visualizations/*.html
+notebooks/.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
