@@ -298,79 +298,115 @@ def _run_council_thread(question: str):
         agent_names = [n for n in agents.keys() if "Kevin" not in n]
         history: list[dict[str, Any]] = []
 
-        def _add(speaker, text, round_num, msg_type="agent"):
-            entry = {"speaker": speaker, "text": text, "round": round_num, "type": msg_type}
+        def _add(speaker, text, round_num, msg_type="agent", phase=""):
+            label = f"[{phase}] " if phase else ""
+            entry = {"speaker": speaker, "text": text, "round": round_num,
+                     "type": msg_type, "phase": phase}
             history.append(entry)
             _sim_messages.append(entry)
 
-        def _agent_speak(name, topic, round_num, max_tok=350):
+        def _agent_speak(name, topic, round_num, phase="", max_tok=300):
             agent = agents[name]
             try:
                 text = agent.respond(history, current_topic=topic, max_tokens=max_tok)
                 if text and not text.startswith("["):
-                    _add(name, text, round_num)
+                    _add(name, text, round_num, phase=phase)
             except Exception:
                 pass
 
-        # === ROUND 0: Opening ===
+        # ================================================================
+        # HEGELIAN DIALECTIC DELIBERATION
+        # Each cycle: THESIS -> ANTITHESIS -> SYNTHESIS -> REVISION
+        # ================================================================
+
         _add("[MODERATOR]",
-             f"Council members, the question before you is: \"{question}\"\n\n"
-             "Speak from your own philosophy. Respond to others. Challenge. Build. Evolve.",
+             f"Council, the question is: \"{question}\"\n\n"
+             "We will follow the dialectic: each of you states a position, "
+             "then reviews others, then reflects, then revises. "
+             "Positions must EVOLVE. Repetition is not allowed.",
              0, "moderator")
 
-        # === ROUND 1: First 2 agents state positions ===
-        r1 = random.sample(agent_names, 2)
-        for name in r1:
-            _agent_speak(name, f"Respond to: \"{question}\"", 1)
+        # Select 4 primary debaters + rest as observers who join later
+        debaters = random.sample(agent_names, min(4, len(agent_names)))
+        observers = [n for n in agent_names if n not in debaters]
 
-        # === ROUND 2: 2 new agents challenge Round 1 ===
-        r1_names = " and ".join(s.split()[0] for s in r1)
+        # === CYCLE 1: THESIS — 4 agents state initial positions ===
         _add("[MODERATOR]",
-             f"{r1_names} have spoken. Who agrees? Who disagrees? Challenge their positions.",
-             2, "moderator")
+             "ROUND 1 \u2014 THESIS: State your position. Be direct. Take a clear stance.",
+             1, "moderator", "THESIS")
 
-        remaining = [n for n in agent_names if n not in r1]
-        r2 = random.sample(remaining, min(2, len(remaining)))
-        for name in r2:
+        for name in debaters:
             _agent_speak(name,
-                f"The question: \"{question}\". {r1_names} have spoken. "
-                f"Respond to THEIR arguments. Name them. Agree or disagree specifically.", 2)
+                f"The question: \"{question}\". "
+                f"State your position clearly in 2-3 sentences. Take a definitive stance.",
+                1, "THESIS")
 
-        # === ROUND 3: Devil's advocate ===
-        spoken = set(r1 + r2)
-        pool3 = [n for n in agent_names if n not in spoken]
-        if pool3:
-            devil = random.choice(pool3)
-            _add("[GOD-MODE]",
-                 "TWIST: Assume the opposite of the majority view. Play devil's advocate.",
-                 3, "god_mode")
-            _agent_speak(devil,
-                f"The question: \"{question}\". The council has been debating. "
-                f"Challenge the STRONGEST argument you've heard. Name who said it.", 3)
-
-        # === ROUND 4: Rebuttal — Round 1 speakers respond to challengers ===
-        r2_names = " and ".join(s.split()[0] for s in r2)
+        # === CYCLE 2: ANTITHESIS — Each debater challenges another ===
+        debater_names = " + ".join(s.split()[0] for s in debaters)
         _add("[MODERATOR]",
-             f"{r2_names} challenged your positions. {r1_names}, how do you respond?",
-             4, "moderator")
-        for name in r1:
-            _agent_speak(name,
-                f"The question: \"{question}\". Your earlier position was challenged by "
-                f"{r2_names}. Defend, revise, or evolve your position. "
-                f"Address their specific points.", 4)
+             f"ROUND 2 \u2014 ANTITHESIS: {debater_names} have spoken. "
+             f"Now challenge the position you disagree with MOST. Name them.",
+             2, "moderator", "ANTITHESIS")
 
-        # === ROUND 5: Final thoughts from anyone not yet heard ===
-        all_spoken = spoken | set(r1)
-        unheard = [n for n in agent_names if n not in all_spoken]
-        if unheard:
+        random.shuffle(debaters)
+        for name in debaters:
+            others = [d for d in debaters if d != name]
+            other_names = ", ".join(o.split()[0] for o in others)
+            _agent_speak(name,
+                f"The question: \"{question}\". "
+                f"You heard {other_names}. Which argument is WEAKEST and why? "
+                f"Name the person. Quote their key claim. Dismantle it.",
+                2, "ANTITHESIS")
+
+        # === CYCLE 3: SYNTHESIS — Reflect on the tension ===
+        _add("[MODERATOR]",
+             "ROUND 3 \u2014 SYNTHESIS: You've stated positions and attacked each other. "
+             "Now REFLECT. What tension exists between your view and the strongest "
+             "counter-argument? Can both truths coexist? What are you NOT seeing?",
+             3, "moderator", "SYNTHESIS")
+
+        for name in debaters[:2]:  # Only 2 reflect to save API calls
+            _agent_speak(name,
+                f"The question: \"{question}\". "
+                f"Reflect honestly on the tension between your position and the "
+                f"strongest challenge you heard. Think out loud. Be vulnerable about uncertainty.",
+                3, "SYNTHESIS")
+
+        # === GOD-MODE: Inject a twist ===
+        _add("[GOD-MODE]",
+             "PLOT TWIST: What if the question itself is wrong? "
+             "What is the REAL question behind this question?",
+             4, "god_mode")
+
+        # === CYCLE 4: REVISION — Updated positions after the twist ===
+        _add("[MODERATOR]",
+             "ROUND 4 \u2014 REVISION: Given everything you've heard and the twist, "
+             "state your REVISED position. Has it changed? If so, how and why? "
+             "If not, why did the challenges fail to convince you?",
+             4, "moderator", "REVISION")
+
+        for name in debaters:
+            _agent_speak(name,
+                f"The question: \"{question}\". "
+                f"After hearing all arguments, challenges, and the god-mode twist: "
+                f"state your REVISED position. If you changed your mind, own it. "
+                f"If you held firm, explain why the challenges didn't convince you.",
+                4, "REVISION")
+
+        # === ROUND 5: Observers join ===
+        if observers:
+            obs_names = " and ".join(o.split()[0] for o in observers)
             _add("[MODERATOR]",
-                 f"{'We have not heard from ' + ' and '.join(s.split()[0] for s in unheard)}. Your turn.",
+                 f"ROUND 5: {obs_names} \u2014 you've been listening. "
+                 f"Having heard the full dialectic, what did the debaters miss?",
                  5, "moderator")
-            for name in unheard[:2]:
+
+            for name in observers[:2]:
                 _agent_speak(name,
-                    f"The question: \"{question}\". The council has debated extensively. "
-                    f"Having listened to everyone, state YOUR position. "
-                    f"Reference the most compelling argument you heard.", 5)
+                    f"The question: \"{question}\". "
+                    f"You observed the entire dialectic. What blind spot do ALL debaters share? "
+                    f"What perspective is missing from this conversation?",
+                    5, "OBSERVER")
 
         # === SYNTHESIS: Kevin wraps up ===
         kevin = agents.get("Kevin (\uae40\uacbd\uc120)")
@@ -378,13 +414,14 @@ def _run_council_thread(question: str):
             try:
                 synthesis = kevin.respond(history,
                     current_topic=(
-                        "Synthesize the council's deliberation. "
-                        "Who agreed? Who clashed? What emerged that no single mind held? "
-                        "How did positions EVOLVE across rounds? "
+                        "Synthesize the DIALECTIC. Track the evolution: "
+                        "What were the initial theses? How did they change after antithesis? "
+                        "What emerged in synthesis that no one held initially? "
+                        "Who revised their position and who held firm? "
                         "End with the ONE question this deliberation leaves unanswered."),
                     max_tokens=400)
                 if synthesis and not synthesis.startswith("["):
-                    _add("Kevin (\uae40\uacbd\uc120)", synthesis, 6, "moderator")
+                    _add("Kevin (\uae40\uacbd\uc120)", synthesis, 6, "moderator", "SYNTHESIS")
             except Exception:
                 pass
 
@@ -798,10 +835,15 @@ def build_app() -> Any:
                     }),
                     html.Span(display_name, style=name_style),
                     html.Span(f" {role}", style={"color": MUTED, "fontSize": "0.8em"}) if role else html.Span(),
-                    html.Span(f"Round {round_num}", style={
-                        "color": MUTED, "fontSize": "0.7em", "marginLeft": "auto",
-                        "backgroundColor": "#0d1117", "padding": "2px 8px", "borderRadius": "4px",
-                    }),
+                    html.Span(
+                        f"{msg.get('phase', '')} R{round_num}" if msg.get("phase") else f"R{round_num}",
+                        style={
+                            "color": GOLD if msg.get("phase") else MUTED,
+                            "fontSize": "0.7em", "marginLeft": "auto",
+                            "backgroundColor": "#0d1117", "padding": "2px 8px",
+                            "borderRadius": "4px", "fontWeight": "600",
+                        },
+                    ),
                 ]),
                 html.P(text, style={
                     "color": TEXT, "fontSize": "0.9em", "lineHeight": "1.6",
