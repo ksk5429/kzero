@@ -370,12 +370,20 @@ def main():
     question = args[0]
     n_rounds = 5
     n_agents = 8
+    randomize = False
 
     for i, arg in enumerate(args[1:], 1):
         if arg == "--rounds" and i < len(args):
             n_rounds = int(args[i + 1]) if i + 1 < len(args) else 5
         elif arg == "--agents" and i < len(args):
             n_agents = int(args[i + 1]) if i + 1 < len(args) else 8
+        elif arg == "--random":
+            randomize = True
+
+    if randomize:
+        n_rounds = random.randint(3, 10)
+        n_agents = random.randint(3, 8)
+        console.print(f"[dim]Randomized: {n_rounds} rounds, {n_agents} agents[/dim]")
 
     run_dialectic(question, n_rounds=n_rounds, n_agents=n_agents)
 
