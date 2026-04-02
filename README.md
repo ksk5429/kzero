@@ -21,21 +21,19 @@ short_description: "8 minds. 1 question. Infinite consequences."
 
 ### 8 minds. 1 question. Infinite consequences.
 
----
-
-> Drop 8 of history's greatest minds into a room. Ask a question. Watch them collide.
-
-Musk argues with Sartre about free will. Feynman calls bullshit on Johnson's immortality quest. Kobe tells everyone to stop philosophizing and just *do*. Carlin laughs at all of them. And you? You're the one pulling the strings.
-
----
+> Drop 8 of history's greatest minds into a room. Ask a question. Watch them collide. Then turn their collision into a book, a podcast, a probability distribution, and a Twitter thread.
 
 ![Python](https://img.shields.io/badge/python-3.11+-blue?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 ![Cost](https://img.shields.io/badge/cost-%240-brightgreen?style=flat-square)
-[![Open in Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/)
 ![Stars](https://img.shields.io/github/stars/ksk5429/kzero?style=flat-square)
+[![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97-Live%20Demo-yellow?style=flat-square)](https://huggingface.co/spaces/kyeongsun/kzero)
 
-<!-- TODO: Add demo GIF -->
+---
+
+## Live Demo
+
+**[https://kyeongsun-kzero.hf.space](https://huggingface.co/spaces/kyeongsun/kzero)** — no install, no API key, just go.
 
 ---
 
@@ -43,11 +41,13 @@ Musk argues with Sartre about free will. Feynman calls bullshit on Johnson's imm
 
 | Method | Link | What You Get |
 |--------|------|-------------|
-| **Live Demo** | [**https://kyeongsun-kzero.hf.space**](https://huggingface.co/spaces/kyeongsun/kzero) | Interactive dashboard — no setup needed |
-| **Kaggle Notebook** | [Open in Kaggle](https://kaggle.com/) | Run the full simulation in your browser |
-| **Local (recommended)** | See Quick Start below | K-ZERO Console + Dash Dashboard + Full control |
+| **Live Demo** | [kyeongsun-kzero.hf.space](https://huggingface.co/spaces/kyeongsun/kzero) | Interactive dashboard, zero setup |
+| **Kaggle** | [Open in Kaggle](https://kaggle.com/) | Full simulation in your browser |
+| **Local** | See Quick Start below | All 3 modes + full pipeline + god-mode |
 
-### Local Quick Play (3 minutes)
+---
+
+## Quick Start
 
 ```bash
 git clone https://github.com/ksk5429/kzero.git && cd kzero
@@ -61,103 +61,113 @@ Get a free API key from [console.groq.com](https://console.groq.com) or [ai.goog
 echo 'LLM_API_KEY=your_key_here' > .env
 echo 'LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/' >> .env
 echo 'COUNCIL_MODEL=gemini-2.5-flash' >> .env
+```
 
-# Option A: Watch 8 geniuses argue (automated)
+Three ways to run:
+
+```bash
+# 1. Council Runner — automated multi-agent deliberation
 python -m runner.council_runner --rounds 5
 
-# Option B: YOU play God (interactive K-ZERO Console)
+# 2. K-ZERO Console — YOU are God, the council obeys
 python -m runner.demiurge
 
-# Option C: Analyze + Visualize a past session
-python -m runner.analyze transcripts/meaning_of_life_20260402_160855.json
-python -m runner.visualize transcripts/meaning_of_life_20260402_160855_analysis.json
-# Opens dashboard at http://localhost:8050
-```
-
-### K-ZERO Console Commands (Option B)
-```
-K-ZERO > What if humans could upload their consciousness to the cloud?
-         (type anything — the council reacts)
-
-K-ZERO > /ask feynman Does Bryan's immortality quest make any sense?
-         (whisper to one agent)
-
-K-ZERO > /mode oxford_debate
-         (switch to adversarial debate mode)
-
-K-ZERO > /vote Should humanity pursue immortality?
-         (force the council to vote YES or NO)
-
-K-ZERO > /end
-         (save transcript, get synthesis, exit)
+# 3. Dialectic Evolution — Hegelian thesis/antithesis/synthesis
+python -m runner.dialectic "Should humanity pursue immortality?" --rounds 5
 ```
 
 ---
 
-## What is this?
+## The Pipeline
 
-A multi-agent deliberation system where 8 AI personas — built from ~3,500 tokens of researched personality data each — argue existential questions using **any free OpenAI-compatible LLM**.
+One question in. Seven artifacts out.
 
-No paid API keys. No cloud dependencies. Just pure intellectual chaos.
+```
+  QUESTION
+     |
+     v
+ +-----------+    +-----------+    +----------+    +----------+    +------------+
+ | Simulate  | -> | Analyze   | -> | Report   | -> | Artifacts| -> | Distribute |
+ | 8 agents  |    | LLM parse |    | Quarto   |    | NbookLM  |    | X thread   |
+ | N rounds  |    | positions |    | HTML/PDF |    | podcast  |    | 280 chars  |
+ +-----------+    +-----------+    +----------+    +----------+    +------------+
+      |                |                |               |                |
+  transcript.json  analysis.json   report.pdf     flashcards       thread.md
+                                                  study guide
+                                                  quiz, slides
+                                                  mind map
+                                                  briefing doc
+```
 
-## Features
-
-- **K-ZERO Console** — Interactive god-mode. Inject variables mid-debate. Whisper to individual agents. Watch consequences ripple through the group.
-- **8 deeply researched personas** — Not "be creative" prompts. Real cognitive biases, speech patterns, memory seeds, and clash dynamics sourced from primary texts.
-- **Any free LLM API** — Groq, OpenRouter, Google AI Studio. Pick one, plug it in, run.
-- **Post-simulation analysis** — LLM-powered transcript analysis extracts agreement maps, position tracking, emergent insights, and topic clusters.
-- **Interactive Dash dashboard** — Network graphs, conflict heatmaps, position timelines, and key quotes. All in Plotly.
-- **3 pre-built scenarios** — Meaning of life, AI alignment, death and legacy. Or write your own.
-- **Shareable transcripts** — Every session saves to JSON. Replay, analyze, share.
+```bash
+# Full pipeline, start to finish
+python -m runner.council_runner --rounds 5                          # Simulate
+python -m runner.analyze transcripts/session_*.json                 # Analyze
+python -m runner.predict "Is AI the next stage of evolution?" --runs 10  # Predict
+python -m runner.report predictions/session_*.json --format all     # Report
+python -m runner.artifacts reports/session_*.pdf --all              # Artifacts
+python -m runner.thread transcripts/session_*.json                  # Twitter thread
+python -m runner.visualize transcripts/session_*_analysis.json      # Dashboard
+```
 
 ---
 
-## Quick Start
+## Simulation Modes
 
-**1. Clone**
+Three engines, three philosophies.
 
-```bash
-git clone https://github.com/ksk5429/kzero.git
-cd kzero
-```
+### 1. Council Runner
 
-**2. Install**
+Natural multi-agent conversation with god-mode injection. Set a scenario, choose a discussion mode, and let 8 agents argue while you inject plot twists mid-session.
 
 ```bash
-pip install -r requirements.txt
+python -m runner.council_runner --scenario scenarios/scenario_01_meaning_of_life.json --rounds 5
 ```
 
-**3. Set your free API key**
+### 2. K-ZERO Console
 
-Create a `.env` file:
-
-```env
-# Pick ONE. All are free, no credit card needed.
-# --- Groq (recommended, fastest) ---
-LLM_API_KEY=gsk_your_groq_key
-LLM_BASE_URL=https://api.groq.com/openai/v1
-COUNCIL_MODEL=llama-3.3-70b-versatile
-
-# --- OpenRouter (most models) ---
-# LLM_API_KEY=sk-or-your_key
-# LLM_BASE_URL=https://openrouter.ai/api/v1
-# COUNCIL_MODEL=meta-llama/llama-3.3-70b-instruct:free
-
-# --- Google AI Studio (Gemini) ---
-# LLM_API_KEY=your_google_key
-# LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
-# COUNCIL_MODEL=gemini-2.5-flash
-```
-
-**4. Run**
+Interactive REPL. You are the demiurge. Type anything and the council reacts. Whisper to one agent. Inject breaking news. Force a vote. Pull one thread and watch the whole tapestry shift.
 
 ```bash
-# Automated deliberation — sit back and watch
-python -m runner.council_runner --scenario scenarios/scenario_01_meaning_of_life.json
-
-# K-ZERO Console — you play god
-python -m runner.demiurge --scenario scenarios/scenario_01_meaning_of_life.json
+python -m runner.demiurge --scenario scenarios/scenario_02_ai_alignment.json
 ```
+
+### 3. Dialectic Evolution
+
+Hegelian algorithm. No free-form conversation — each round follows a strict protocol:
+
+```
+THESIS      Agent states their position
+     |
+ANTITHESIS  Agent reviews ALL other positions, identifies challenges
+     |
+SYNTHESIS   Agent integrates what challenged them most
+     |
+REVISION    Agent produces a revised position (may shift, may hold)
+```
+
+Over N rounds, positions genuinely evolve. The output is not a transcript but a **thought evolution map** — showing how each mind changed and why.
+
+```bash
+python -m runner.dialectic "What is consciousness?" --rounds 5 --agents 4
+```
+
+---
+
+## Discussion Modes
+
+Every simulation can run in any of 8 modes. Switch mid-session with `/mode <name>`.
+
+| Mode | Emoji | What Happens |
+|------|-------|-------------|
+| `philosophical_seminar` | :books: | Open exploration, Socratic depth, no winners |
+| `oxford_debate` | :crossed_swords: | Formal adversarial debate, proposition vs opposition |
+| `yes_no_vote` | :ballot_box_with_ballot: | Council votes YES or NO, majority wins |
+| `multiple_choice` | :bar_chart: | Council picks from options, ranked results |
+| `brainstorm` | :bulb: | No criticism allowed, pure ideation, wild ideas welcomed |
+| `war_room` | :military_helmet: | Crisis scenario, time pressure, decisive action required |
+| `socratic_dialogue` | :thinking: | Question-driven inquiry, no assertions, only questions |
+| `delphi_method` | :crystal_ball: | Anonymous rounds, convergence tracking, expert consensus |
 
 ---
 
@@ -188,6 +198,8 @@ python -m runner.demiurge --scenario scenarios/scenario_01_meaning_of_life.json
    JOHNSON           MUSK  ←——0.8——→ JOHNSON
 ```
 
+Each persona is built from ~3,500 tokens of researched personality data — speech patterns, core axioms, clash dynamics, and formative memories sourced from primary texts. The LLM doesn't improvise a personality. It inhabits one.
+
 ---
 
 ## K-ZERO Console
@@ -195,34 +207,38 @@ python -m runner.demiurge --scenario scenarios/scenario_01_meaning_of_life.json
 You are the demiurge. The council exists because you willed it.
 
 ```
-K-ZERO > /all What is worth dying for?
-```
+K-ZERO > What if humans could upload their consciousness to the cloud?
+         (type anything — the council reacts)
 
-Watch 8 agents respond in character, building on each other's arguments.
+K-ZERO > /ask feynman Does Bryan's immortality quest make any sense?
+         (whisper to one agent)
 
-```
-K-ZERO > /inject BREAKING: A message from the future confirms no one 
+K-ZERO > /inject BREAKING: A message from the future confirms no one
          will remember any of you in 200 years.
-```
+         (watch the shockwave)
 
-Watch the shockwave. Musk doubles down. Sartre shrugs. Kobe doesn't care. Carlin saw it coming.
+K-ZERO > /mode war_room
+         (switch to crisis mode)
 
-```
-K-ZERO > /ask feynman Does Bryan's immortality quest contradict everything 
-         you believe about curiosity?
-```
+K-ZERO > /vote Should humanity pursue immortality?
+         (force YES/NO vote)
 
-Pull one thread. Watch the whole tapestry shift.
+K-ZERO > /end
+         (save transcript, get synthesis, exit)
+```
 
 ### All Commands
 
 | Command | What it does |
 |---------|-------------|
-| `/all <question>` | Pose a question — all 8 agents respond |
+| `(any text)` | Pose a question — all 8 agents respond |
+| `/all <question>` | Same as above, explicit |
 | `/ask <name> <text>` | Whisper to one agent directly |
 | `/inject <text>` | God-mode variable injection — mid-debate plot twist |
 | `/next` | Let the next round play out naturally |
 | `/next <N>` | Run N rounds without intervention |
+| `/mode <name>` | Switch discussion mode (see 8 modes above) |
+| `/vote <question>` | Force YES/NO vote |
 | `/who` | Show all members and their current stance |
 | `/history` | Show recent transcript |
 | `/synthesis` | Kevin synthesizes the discussion so far |
@@ -230,43 +246,126 @@ Pull one thread. Watch the whole tapestry shift.
 
 ---
 
-## Visualization
+## Dialectic Evolution
 
-After a simulation, run the analyzer and dashboard:
+The Hegelian engine doesn't produce conversations. It produces **evolution maps**.
 
 ```bash
-# Analyze the transcript
-python -m runner.analyze transcripts/meaning_of_life_20260402.json
+python -m runner.dialectic "Is free will an illusion?" --rounds 5
+```
 
-# Launch the interactive Dash dashboard
-python -m runner.visualize analysis_result.json
+Each agent goes through 4 phases per round. Over 5 rounds, that's 20 introspective steps per agent. Positions genuinely shift. Alliances form and break. The output tracks:
+
+- **Position trajectory** — Where each agent started vs where they ended
+- **Key shifts** — The exact moment an argument changed someone's mind
+- **Convergence score** — Did the council find common ground, or split further apart?
+- **Strongest argument** — Which thesis survived the most scrutiny?
+
+---
+
+## Prediction Engine
+
+Run the same question N times. If answers converge, it has an answer. If they diverge, it's genuinely open.
+
+```bash
+python -m runner.predict "Should humanity pursue immortality?" --runs 10 --rounds 3
+```
+
+Outputs:
+- **Probability distribution** — What percentage of runs reached each conclusion
+- **Convergence metric** — How stable is the answer across runs?
+- **Minority reports** — The strongest dissenting positions
+- **Confidence interval** — How much to trust the majority
+
+The distribution reveals what no single run can: whether the question has a center of gravity or is fundamentally contested.
+
+---
+
+## Report Generation
+
+Turn simulation results into polished Quarto reports — the translation layer between swarm intelligence and human understanding.
+
+```bash
+python -m runner.report predictions/immortality_20260402.json --format html
+python -m runner.report predictions/immortality_20260402.json --format pdf
+python -m runner.report predictions/immortality_20260402.json --format all   # HTML + PDF + DOCX
+```
+
+Reports include:
+- Executive summary (LLM-generated)
+- Position evolution charts (Plotly)
+- Agreement/conflict maps
+- Prediction distributions
+- K-ZERO's divine recommendation
+
+---
+
+## NotebookLM Artifacts
+
+The report is the seed. NotebookLM is the multiplier. One question becomes seven learning materials.
+
+```bash
+python -m runner.artifacts reports/immortality_20260402.pdf --all
+```
+
+| Artifact | What You Get |
+|----------|-------------|
+| `--podcast` | Audio Overview — two hosts discussing the council's deliberation |
+| `--study-guide` | Structured study guide with key concepts and takeaways |
+| `--quiz` | Multiple-choice quiz to test comprehension |
+| `--flashcards` | Spaced-repetition flashcards for key arguments |
+| `--slides` | Slide deck summarizing the deliberation |
+| `--mind-map` | Visual mind map of connected ideas |
+| `--briefing` | Executive briefing document |
+| `--all` | Generate everything |
+
+---
+
+## Visualization
+
+Interactive Plotly Dash dashboard showing everything that happened.
+
+```bash
+python -m runner.analyze transcripts/session_20260402.json
+python -m runner.visualize transcripts/session_20260402_analysis.json
+# Opens at http://localhost:8050
 ```
 
 The dashboard shows:
-
 - **Network graph** — Who agrees with whom, weighted by interaction strength
 - **Conflict heatmap** — Pairwise agreement/disagreement intensity
 - **Position timeline** — How each agent's stance evolves across rounds
 - **Key quotes** — Most impactful moments, auto-extracted
-- **Emergent insights** — Ideas that no individual agent proposed, but the group produced
+- **Emergent insights** — Ideas no individual proposed, but the group produced
+- **Chat log panel** — Full transcript with agent colors and round markers
 
 ---
 
 ## Architecture
 
+14 Python modules. ~6,000 lines. Zero fluff.
+
 ```
 the_council/
 ├── runner/
-│   ├── council_runner.py      # Automated deliberation engine
-│   ├── demiurge.py            # K-ZERO Console (interactive god-mode)
-│   ├── agent.py               # Agent class + LLM integration
-│   ├── analyze.py             # Post-simulation transcript analysis
-│   ├── visualize.py           # Plotly Dash dashboard
-│   └── validate.py            # Character data validation
+│   ├── agent.py               # Agent class, OpenAI-compatible, 4-key rotation
+│   ├── council_runner.py      # Mode-aware automated simulation engine
+│   ├── demiurge.py            # K-ZERO Console (interactive god-mode REPL)
+│   ├── dialectic.py           # Hegelian dialectic evolution engine
+│   ├── modes.py               # 8 discussion modes + voting engine
+│   ├── evolution.py           # Opinion tracking + convergence/divergence detection
+│   ├── predict.py             # Multi-run aggregation + probability distribution
+│   ├── analyze.py             # LLM transcript analysis + JSON repair
+│   ├── visualize.py           # Plotly Dash dashboard with chat log panel
+│   ├── report.py              # Quarto report generator (HTML, PDF, DOCX)
+│   ├── artifacts.py           # NotebookLM artifact pipeline
+│   ├── thread.py              # Twitter/X thread generator
+│   ├── validate.py            # Data integrity checker
+│   └── __init__.py
 ├── characters/
-│   ├── musk/                  # ~3,500 tokens of personality data
+│   ├── musk/                  # ~3,500 tokens of personality data each
 │   │   ├── personality_matrix.json
-│   │   ├── voice.md           # Speech patterns for system prompts
+│   │   ├── voice.md           # Speech patterns
 │   │   ├── axioms.md          # 10 core beliefs
 │   │   ├── clash_points.md    # Dynamics with every other member
 │   │   └── memory_seeds.md    # Key life experiences
@@ -282,55 +381,54 @@ the_council/
 │   ├── scenario_02_ai_alignment.json
 │   └── scenario_03_death_and_legacy.json
 ├── config/
-│   └── simulation_config.json
-├── transcripts/               # Auto-saved session transcripts
+│   └── discussion_modes.json  # 8 mode definitions
+├── transcripts/               # Auto-saved session transcripts (JSON)
+├── predictions/               # Multi-run prediction results
+├── reports/                   # Generated Quarto reports
+├── visualizations/            # Exported dashboard assets
+├── dialectics/                # Dialectic evolution outputs
 ├── profiles/
 │   └── council_profiles.json
 ├── requirements.txt
+├── pyproject.toml
+├── Dockerfile                 # HF Spaces deployment
+├── app.py                     # Gradio app for HF Spaces
 └── .env                       # Your API key (not committed)
 ```
 
 ---
 
-## How It Works
+## Free LLM Providers
 
-```
-Character Data ──→ System Prompt ──→ LLM Call ──→ Transcript
-     │                                              │
-  voice.md                                    saved as JSON
-  axioms.md                                         │
-  clash_points.md                                   ▼
-  memory_seeds.md                  Analyzer (LLM-powered) ──→ Dash Dashboard
-  personality_matrix.json            agreement maps             network graph
-                                     position tracking          heatmap
-                                     emergent insights          timeline
-```
+No credit card needed. Seriously.
 
-Each agent's system prompt is assembled from ~3,500 tokens of character data: speech patterns, core beliefs, interaction dynamics, and formative memories. The LLM doesn't improvise a personality — it inhabits one.
+| Provider | Free Tier | Best Model | Signup |
+|----------|-----------|-----------|--------|
+| **Ollama** | Unlimited, local, free forever | `llama3.3:70b`, `qwen2.5:32b` | [ollama.com](https://ollama.com) |
+| **Google AI Studio** | Generous free tier | `gemini-2.5-flash` | [aistudio.google.com](https://aistudio.google.com) |
+| **Groq** | Very generous free tier | `llama-3.3-70b-versatile` | [console.groq.com](https://console.groq.com) |
+| **OpenRouter** | Free models available | `meta-llama/llama-3.3-70b-instruct:free` | [openrouter.ai](https://openrouter.ai) |
 
----
+```env
+# Ollama (local, unlimited, recommended for heavy use)
+LLM_API_KEY=ollama
+LLM_BASE_URL=http://localhost:11434/v1
+COUNCIL_MODEL=llama3.3:70b
 
-## Scenarios
+# Google AI Studio
+LLM_API_KEY=your_google_key
+LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+COUNCIL_MODEL=gemini-2.5-flash
 
-| # | Scenario | The Question | Spiciest Tension |
-|---|----------|-------------|-----------------|
-| 1 | **Meaning of Life** | What is the point of life? | Musk (extend consciousness) vs Carlin (failed experiment) |
-| 2 | **AI Alignment** | Should we build god? | Musk (build it) vs Sartre (existential threat to freedom) |
-| 3 | **Death and Legacy** | What survives us? | Johnson (don't die) vs Kobe (legacy through craft) |
+# Groq (fastest inference)
+LLM_API_KEY=gsk_your_groq_key
+LLM_BASE_URL=https://api.groq.com/openai/v1
+COUNCIL_MODEL=llama-3.3-70b-versatile
 
-Want a custom scenario? Create a JSON file:
-
-```json
-{
-  "id": "your_scenario",
-  "title": "Your Question",
-  "opening_prompt": "The council is gathered to deliberate on...",
-  "moderator_prompts": ["Kevin asks: ..."],
-  "god_mode_injection": {
-    "mid_discussion": "BREAKING: ...",
-    "late_discussion": "BREAKING: ..."
-  }
-}
+# OpenRouter (most model variety)
+LLM_API_KEY=sk-or-your_key
+LLM_BASE_URL=https://openrouter.ai/api/v1
+COUNCIL_MODEL=meta-llama/llama-3.3-70b-instruct:free
 ```
 
 ---
@@ -339,25 +437,35 @@ Want a custom scenario? Create a JSON file:
 
 Each character is a folder under `characters/` with 5 files:
 
-1. **`personality_matrix.json`** — Cognitive biases, knowledge domains, interaction weights
-2. **`voice.md`** — How they talk. Sentence structure, vocabulary, verbal tics
-3. **`axioms.md`** — 10 non-negotiable beliefs
-4. **`clash_points.md`** — How they react to every other member
-5. **`memory_seeds.md`** — Formative experiences the LLM can reference
+| File | Purpose |
+|------|---------|
+| `personality_matrix.json` | Cognitive biases, knowledge domains, interaction weights |
+| `voice.md` | How they talk — sentence structure, vocabulary, verbal tics |
+| `axioms.md` | 10 non-negotiable beliefs |
+| `clash_points.md` | How they react to every other member |
+| `memory_seeds.md` | Formative experiences the LLM can reference |
 
 Use primary sources. Biographies, interviews, their own writing. The richer the data, the more the agent sounds like *them* instead of a chatbot cosplaying.
 
+```bash
+mkdir characters/nietzsche
+# Create the 5 files above
+# The system auto-discovers new character folders
+```
+
 ---
 
-## Free API Providers
+## Philosophy
 
-No credit card needed. Seriously.
+> "The book is the translation layer between swarm intelligence and individual human understanding."
 
-| Provider | Free Tier | Best Model | Signup |
-|----------|-----------|-----------|--------|
-| **Groq** | Very generous free tier | `llama-3.3-70b-versatile` | [console.groq.com](https://console.groq.com) |
-| **OpenRouter** | Free models available | `meta-llama/llama-3.3-70b-instruct:free` | [openrouter.ai](https://openrouter.ai) |
-| **Google AI Studio** | Free tier | `gemini-2.0-flash` | [aistudio.google.com](https://aistudio.google.com) |
+K-ZERO doesn't answer questions. It generates **thought landscapes** — showing where 8 brilliant minds agree, where they clash, and where none of them have been yet.
+
+The pipeline turns that landscape into something you can read, listen to, quiz yourself on, and share. One question becomes a book, a podcast, a probability distribution, and a Twitter thread.
+
+The question was never "What is the answer?"
+
+The question was always "What does the answer look like from 8 directions at once?"
 
 ---
 
@@ -365,11 +473,11 @@ No credit card needed. Seriously.
 
 1. Fork the repo
 2. Create a branch (`git checkout -b feat/nietzsche-agent`)
-3. Add your character, scenario, or feature
+3. Add your character, scenario, mode, or feature
 4. Test it runs with at least one free API
 5. Open a PR
 
-Character contributions are especially welcome. The world needs a council with Nietzsche, Ada Lovelace, or Marcus Aurelius in it.
+Character contributions are especially welcome. The world needs a council with Nietzsche, Ada Lovelace, Marcus Aurelius, or Frida Kahlo in it.
 
 ---
 
@@ -381,5 +489,5 @@ MIT. Do whatever you want. Build your own council. Ask your own questions. Break
 
 <p align="center">
 <i>"The unexamined life is not worth living." — Socrates<br>
-"Examine it with 8 agents and a free API." — K-ZERO</i>
+"Examine it with 8 agents, a Hegelian dialectic, and a free API." — K-ZERO</i>
 </p>
