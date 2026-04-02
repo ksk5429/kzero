@@ -311,119 +311,104 @@ def _run_council_thread(question: str):
                 text = agent.respond(history, current_topic=topic, max_tokens=max_tok)
                 if text and not text.startswith("["):
                     _add(name, text, round_num, phase=phase)
-            except Exception:
-                pass
+                else:
+                    _add(name, f"[{name.split()[0]} could not formulate a response]",
+                         round_num, "system", phase)
+            except Exception as e:
+                _add(name, f"[Error: {str(e)[:100]}]", round_num, "system", phase)
 
         # ================================================================
-        # HEGELIAN DIALECTIC DELIBERATION
-        # Each cycle: THESIS -> ANTITHESIS -> SYNTHESIS -> REVISION
+        # HEGELIAN DIALECTIC — ALL agents speak EVERY round
         # ================================================================
+
+        all_agents = list(agent_names)  # All 7 non-Kevin agents
+        random.shuffle(all_agents)
 
         _add("[MODERATOR]",
              f"Council, the question is: \"{question}\"\n\n"
-             "We will follow the dialectic: each of you states a position, "
-             "then reviews others, then reflects, then revises. "
-             "Positions must EVOLVE. Repetition is not allowed.",
+             "We follow the dialectic. Every member speaks each round. "
+             "Positions must EVOLVE through the process.",
              0, "moderator")
 
-        # Select 4 primary debaters + rest as observers who join later
-        debaters = random.sample(agent_names, min(4, len(agent_names)))
-        observers = [n for n in agent_names if n not in debaters]
-
-        # === CYCLE 1: THESIS — 4 agents state initial positions ===
+        # === ROUND 1: THESIS — ALL agents state initial positions ===
         _add("[MODERATOR]",
-             "ROUND 1 \u2014 THESIS: State your position. Be direct. Take a clear stance.",
+             "ROUND 1 \u2014 THESIS: Each of you, state your position. "
+             "Be direct. Take a clear stance in 2-3 sentences.",
              1, "moderator", "THESIS")
 
-        for name in debaters:
+        for name in all_agents:
             _agent_speak(name,
                 f"The question: \"{question}\". "
-                f"State your position clearly in 2-3 sentences. Take a definitive stance.",
-                1, "THESIS")
+                f"State your position clearly. Take a definitive stance.",
+                1, "THESIS", max_tok=200)
 
-        # === CYCLE 2: ANTITHESIS — Each debater challenges another ===
-        debater_names = " + ".join(s.split()[0] for s in debaters)
+        # === ROUND 2: ANTITHESIS — ALL agents challenge someone ===
         _add("[MODERATOR]",
-             f"ROUND 2 \u2014 ANTITHESIS: {debater_names} have spoken. "
-             f"Now challenge the position you disagree with MOST. Name them.",
+             "ROUND 2 \u2014 ANTITHESIS: Everyone has spoken. "
+             "Now challenge the position you disagree with MOST. Name the person.",
              2, "moderator", "ANTITHESIS")
 
-        random.shuffle(debaters)
-        for name in debaters:
-            others = [d for d in debaters if d != name]
-            other_names = ", ".join(o.split()[0] for o in others)
+        random.shuffle(all_agents)
+        for name in all_agents:
             _agent_speak(name,
                 f"The question: \"{question}\". "
-                f"You heard {other_names}. Which argument is WEAKEST and why? "
-                f"Name the person. Quote their key claim. Dismantle it.",
-                2, "ANTITHESIS")
+                f"You heard everyone. Which argument is WEAKEST? "
+                f"Name the person. Quote their claim. Challenge it.",
+                2, "ANTITHESIS", max_tok=200)
 
-        # === CYCLE 3: SYNTHESIS — Reflect on the tension ===
+        # === ROUND 3: SYNTHESIS — ALL agents reflect ===
         _add("[MODERATOR]",
-             "ROUND 3 \u2014 SYNTHESIS: You've stated positions and attacked each other. "
-             "Now REFLECT. What tension exists between your view and the strongest "
-             "counter-argument? Can both truths coexist? What are you NOT seeing?",
+             "ROUND 3 \u2014 SYNTHESIS: You've attacked each other. "
+             "Now REFLECT. What tension exists between your view and the "
+             "strongest counter-argument? Can both be true?",
              3, "moderator", "SYNTHESIS")
 
-        for name in debaters[:2]:  # Only 2 reflect to save API calls
+        random.shuffle(all_agents)
+        for name in all_agents:
             _agent_speak(name,
                 f"The question: \"{question}\". "
-                f"Reflect honestly on the tension between your position and the "
-                f"strongest challenge you heard. Think out loud. Be vulnerable about uncertainty.",
-                3, "SYNTHESIS")
+                f"Reflect on the tension between your position and the "
+                f"strongest challenge. What might you be wrong about?",
+                3, "SYNTHESIS", max_tok=200)
 
-        # === GOD-MODE: Inject a twist ===
+        # === GOD-MODE TWIST ===
         _add("[GOD-MODE]",
-             "PLOT TWIST: What if the question itself is wrong? "
+             "TWIST: What if the question itself is wrong? "
              "What is the REAL question behind this question?",
              4, "god_mode")
 
-        # === CYCLE 4: REVISION — Updated positions after the twist ===
+        # === ROUND 4: REVISION — ALL agents revise ===
         _add("[MODERATOR]",
-             "ROUND 4 \u2014 REVISION: Given everything you've heard and the twist, "
-             "state your REVISED position. Has it changed? If so, how and why? "
-             "If not, why did the challenges fail to convince you?",
+             "ROUND 4 \u2014 REVISION: Given everything \u2014 theses, attacks, "
+             "reflections, and the twist \u2014 state your FINAL position. "
+             "Has it changed? If so, why? If not, why did nothing convince you?",
              4, "moderator", "REVISION")
 
-        for name in debaters:
+        random.shuffle(all_agents)
+        for name in all_agents:
             _agent_speak(name,
                 f"The question: \"{question}\". "
-                f"After hearing all arguments, challenges, and the god-mode twist: "
-                f"state your REVISED position. If you changed your mind, own it. "
-                f"If you held firm, explain why the challenges didn't convince you.",
-                4, "REVISION")
+                f"After the full dialectic: state your REVISED position. "
+                f"If changed, own it and explain why. If held firm, explain why.",
+                4, "REVISION", max_tok=200)
 
-        # === ROUND 5: Observers join ===
-        if observers:
-            obs_names = " and ".join(o.split()[0] for o in observers)
-            _add("[MODERATOR]",
-                 f"ROUND 5: {obs_names} \u2014 you've been listening. "
-                 f"Having heard the full dialectic, what did the debaters miss?",
-                 5, "moderator")
-
-            for name in observers[:2]:
-                _agent_speak(name,
-                    f"The question: \"{question}\". "
-                    f"You observed the entire dialectic. What blind spot do ALL debaters share? "
-                    f"What perspective is missing from this conversation?",
-                    5, "OBSERVER")
-
-        # === SYNTHESIS: Kevin wraps up ===
+        # === KEVIN SYNTHESIS ===
         kevin = agents.get("Kevin (\uae40\uacbd\uc120)")
         if kevin:
             try:
                 synthesis = kevin.respond(history,
                     current_topic=(
-                        "Synthesize the DIALECTIC. Track the evolution: "
-                        "What were the initial theses? How did they change after antithesis? "
-                        "What emerged in synthesis that no one held initially? "
-                        "Who revised their position and who held firm? "
-                        "End with the ONE question this deliberation leaves unanswered."),
+                        "Synthesize the DIALECTIC. "
+                        "Who started where (thesis)? Who attacked whom (antithesis)? "
+                        "What tensions were acknowledged (synthesis)? "
+                        "Who CHANGED their position in revision and who held firm? "
+                        "What emerged that NO ONE held at the start? "
+                        "End with the ONE unanswered question."),
                     max_tokens=400)
                 if synthesis and not synthesis.startswith("["):
-                    _add("Kevin (\uae40\uacbd\uc120)", synthesis, 6, "moderator", "SYNTHESIS")
-            except Exception:
-                pass
+                    _add("Kevin (\uae40\uacbd\uc120)", synthesis, 5, "moderator", "FINAL SYNTHESIS")
+            except Exception as e:
+                _add("Kevin (\uae40\uacbd\uc120)", f"[Synthesis error: {e}]", 5, "system")
 
     except Exception as e:
         _sim_error = str(e)
