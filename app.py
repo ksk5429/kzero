@@ -211,7 +211,7 @@ def _agent_role(name: str) -> str:
 
 LLM_API_KEY = os.getenv("LLM_API_KEY", "")
 LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1")
-COUNCIL_MODEL = os.getenv("COUNCIL_MODEL", "llama-3.3-70b-versatile")
+COUNCIL_MODEL = os.getenv("COUNCIL_MODEL", "llama-3.1-8b-instant")  # Fastest Groq model for web
 
 PLACEHOLDER_QUESTIONS = [
     "What would you sacrifice everything for?",
@@ -369,7 +369,35 @@ def _run_mini_council(question: str) -> dict:
             conversation_history.append(entry)
             results["responses"].append(entry)
 
-        # === SYNTHESIS: Kevin wraps up (skipping Round 3 for web speed) ===
+        # === ROUND 3: One more agent with a twist ===
+        spoken = set(round1_speakers + round2_speakers)
+        round3_pool = [n for n in agent_names if n not in spoken]
+        if round3_pool:
+            challenger = random.choice(round3_pool)
+            agent = agents[challenger]
+            try:
+                response_text = agent.respond(
+                    conversation_history,
+                    current_topic=(
+                        f"The question is: \"{question}\". "
+                        f"You've heard the others. Now assume the OPPOSITE of the majority view is true. "
+                        f"Play devil's advocate. Challenge the strongest argument you've heard."
+                    ),
+                    max_tokens=250,
+                )
+                if response_text and not response_text.startswith("["):
+                    entry = {
+                        "speaker": challenger,
+                        "text": response_text,
+                        "round": 3,
+                        "type": "agent",
+                    }
+                    conversation_history.append(entry)
+                    results["responses"].append(entry)
+            except Exception:
+                pass
+
+        # === SYNTHESIS: Kevin wraps up ===
         kevin = agents.get("Kevin (\uae40\uacbd\uc120)")
         if kevin:
             try:
@@ -627,80 +655,17 @@ def build_app() -> Any:
                     },
                 ),
 
-                # Status area — custom animated loading
+                # Status area
                 html.Div(id="sim-status", style={"marginTop": "24px", "textAlign": "center"}),
 
-                # Custom loading overlay (shown/hidden by callback)
-                html.Div(id="sim-loading-overlay", style={"display": "none"}, children=[
-                    html.Div(style={
-                        "padding": "48px 24px",
-                        "textAlign": "center",
-                        "backgroundColor": CARD,
-                        "borderRadius": "16px",
-                        "border": f"1px solid {BORDER}",
-                        "maxWidth": "500px",
-                        "margin": "24px auto",
-                    }, children=[
-                        # Pulsing orb animation (CSS keyframes)
-                        html.Div(style={
-                            "width": "60px", "height": "60px",
-                            "borderRadius": "50%",
-                            "background": f"radial-gradient(circle, {GOLD} 0%, transparent 70%)",
-                            "margin": "0 auto 20px",
-                            "animation": "pulse-orb 2s ease-in-out infinite",
-                        }),
-                        # Stage text
-                        html.Div("The Council is deliberating...", style={
-                            "color": GOLD, "fontSize": "1.2em", "fontWeight": "700",
-                            "marginBottom": "12px",
-                        }),
-                        # Rotating agent names
-                        html.Div(style={"marginBottom": "16px"}, children=[
-                            html.Span(name.split()[0], style={
-                                "color": AGENT_COLORS.get(name, MUTED),
-                                "fontSize": "0.85em", "fontWeight": "600",
-                                "padding": "4px 10px", "margin": "3px",
-                                "borderRadius": "14px",
-                                "border": f"1px solid {AGENT_COLORS.get(name, BORDER)}",
-                                "display": "inline-block",
-                                "animation": f"fade-agent {1.5 + i * 0.3}s ease-in-out infinite",
-                            }) for i, name in enumerate([
-                                "Elon Musk", "Richard Feynman", "Kobe Bryant", "Steve Jobs",
-                                "Jean-Paul Sartre", "George Carlin", "Bryan Johnson",
-                            ])
-                        ]),
-                        # Progress stages
-                        html.Div([
-                            html.Div("\u2022 Round 1: Two agents state their positions", style={
-                                "color": MUTED, "fontSize": "0.8em", "margin": "4px 0"}),
-                            html.Div("\u2022 Round 2: Two more agents challenge them by name", style={
-                                "color": MUTED, "fontSize": "0.8em", "margin": "4px 0"}),
-                            html.Div("\u2022 Synthesis: Kevin connects the threads", style={
-                                "color": MUTED, "fontSize": "0.8em", "margin": "4px 0"}),
-                        ], style={"marginTop": "16px"}),
-                        # Timer
-                        html.Div("This takes about 30-90 seconds...", style={
-                            "color": MUTED, "fontSize": "0.75em",
-                            "marginTop": "16px", "opacity": "0.5",
-                        }),
-                    ]),
-                    # CSS Keyframe animations (injected as a style tag workaround)
-                    html.Div(style={"display": "none"}, **{
-                        "data-style": """
-                        @keyframes pulse-orb {
-                            0%, 100% { transform: scale(1); opacity: 0.6; }
-                            50% { transform: scale(1.3); opacity: 1; }
-                        }
-                        @keyframes fade-agent {
-                            0%, 100% { opacity: 0.3; }
-                            50% { opacity: 1; }
-                        }
-                        """
-                    }),
-                ]),
-
-                # Results area
-                html.Div(id="sim-results"),
+                # Results area with Dash built-in loading spinner
+                dcc.Loading(
+                    id="sim-loading",
+                    type="circle",
+                    color=GOLD,
+                    children=html.Div(id="sim-results"),
+                    style={"marginTop": "24px"},
+                ),
 
                 # Hidden stores
                 dcc.Store(id="sim-timestamp", data=0),
@@ -767,21 +732,17 @@ def build_app() -> Any:
         Output("sim-results", "children"),
         Output("sim-status", "children"),
         Output("sim-timestamp", "data"),
-        Output("sim-loading-overlay", "style"),
         Input("run-btn", "n_clicks"),
         State("question-input", "value"),
         State("sim-timestamp", "data"),
         prevent_initial_call=True,
     )
     def run_council_simulation(n_clicks: int, question: str | None, last_ts: float) -> tuple:
-        hide_loading = {"display": "none"}
-        show_loading = {"display": "block"}
-
         if not n_clicks or not question or not question.strip():
             return no_update, html.Div(
                 "Please type a question first.",
                 style={"color": ACCENT_RED, "fontSize": "0.9em"},
-            ), no_update, hide_loading
+            ), no_update
 
         # Rate limiting: 60 second cooldown
         now = time.time()
@@ -790,14 +751,14 @@ def build_app() -> Any:
             return no_update, html.Div(
                 f"The Council needs time to deliberate. Try again in {remaining} seconds.",
                 style={"color": GOLD, "fontSize": "0.9em"},
-            ), no_update, hide_loading
+            ), no_update
 
         # Check API key
         if not LLM_API_KEY:
             return no_update, html.Div(
                 "API key not configured. Set LLM_API_KEY environment variable.",
                 style={"color": ACCENT_RED, "fontSize": "0.9em"},
-            ), no_update, hide_loading
+            ), no_update
 
         # Run simulation
         result = _run_mini_council(question.strip())
@@ -806,14 +767,14 @@ def build_app() -> Any:
             return html.Div(), html.Div(
                 f"Error: {result['error'][:200]}",
                 style={"color": ACCENT_RED, "fontSize": "0.85em", "whiteSpace": "pre-wrap"},
-            ), now, hide_loading
+            ), now
 
         responses = result["responses"]
         if not responses:
             return html.Div(), html.Div(
                 "The Council could not generate responses. Check your API key and try again.",
                 style={"color": ACCENT_RED, "fontSize": "0.9em"},
-            ), now, hide_loading
+            ), now
 
         # Build response cards
         cards: list[Any] = []
@@ -918,7 +879,7 @@ def build_app() -> Any:
         ], style={"marginTop": "24px", "maxWidth": "750px", "margin": "24px auto 0"}), html.Div(
             f"Deliberation complete \u2014 {len(responses)} messages, including moderator prompts and god-mode injection.",
             style={"color": ACCENT_GREEN, "fontSize": "0.9em"},
-        ), now, hide_loading
+        ), now
 
     return app
 
