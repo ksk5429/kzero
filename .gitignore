@@ -23,3 +23,6 @@ reports/*.pdf
 # OS
 .DS_Store
 Thumbs.db
+dist/
+build/
+*.egg-info/
