@@ -147,15 +147,41 @@ def _run_council(question: str, n_steps: int = 3) -> None:
             if _sim_stop:
                 return
             agent = agents[name]
+            short = name.split()[0]
+            thinking_prompts = {
+                "THESIS": f"formulating position on the question",
+                "ANTITHESIS": f"identifying the weakest argument to challenge",
+                "SYNTHESIS": f"reflecting on tensions in the debate",
+                "REVISION": f"deciding whether to revise or hold firm",
+            }
+            phase_key = phase.split()[-1] if phase else ""
+            thinking_desc = thinking_prompts.get(phase_key, "thinking")
+
+            # Show thinking indicator
+            thinking_entry = {
+                "speaker": name, "text": f"{short} is {thinking_desc}...",
+                "round": rnd, "type": "thinking", "phase": phase,
+            }
+            _sim_messages.append(thinking_entry)
+
             for attempt in range(4):
                 try:
                     text = agent.respond(
                         history, current_topic=topic, max_tokens=max_tok)
+
+                    # Remove thinking indicator
+                    if thinking_entry in _sim_messages:
+                        _sim_messages.remove(thinking_entry)
+
                     if text and not text.startswith("["):
                         _add(name, text, rnd, "agent", phase)
                         time.sleep(2)
                         return
                 except Exception as e:
+                    # Remove thinking indicator on error too
+                    if thinking_entry in _sim_messages:
+                        _sim_messages.remove(thinking_entry)
+
                     err = str(e).lower()
                     if ("429" in err or "rate" in err or "quota" in err) and attempt < 3:
                         wait = 5 * (attempt + 1)
@@ -165,6 +191,8 @@ def _run_council(question: str, n_steps: int = 3) -> None:
                             "round": rnd, "type": "system", "phase": "",
                         })
                         time.sleep(wait)
+                        # Re-add thinking indicator for retry
+                        _sim_messages.append(thinking_entry)
                         try:
                             agent.client = _rotate_client()
                         except Exception:
@@ -173,7 +201,10 @@ def _run_council(question: str, n_steps: int = 3) -> None:
                     else:
                         _add(name, f"[Error: {str(e)[:100]}]", rnd, "system", phase)
                         return
-            _add(name, f"[{name.split()[0]} could not respond]", rnd, "system", phase)
+
+            if thinking_entry in _sim_messages:
+                _sim_messages.remove(thinking_entry)
+            _add(name, f"[{short} could not respond]", rnd, "system", phase)
 
         # ==============================================================
         # MULTI-STEP HEGELIAN DIALECTIC
@@ -382,8 +413,10 @@ def _make_layout() -> html.Div:
                 debounce=False,
                 style={
                     "flex": "1",
-                    "padding": "12px 16px",
-                    "fontSize": "0.95em",
+                    "padding": "16px 20px",
+                    "fontSize": "1.05em",
+                    "lineHeight": "1.4",
+                    "height": "54px",
                     "backgroundColor": BG,
                     "color": TEXT,
                     "border": f"1px solid {BORDER}",
@@ -418,7 +451,7 @@ def _make_layout() -> html.Div:
             "display": "flex",
             "alignItems": "center",
             "gap": "10px",
-            "padding": "10px 16px",
+            "padding": "16px 16px",
             "backgroundColor": CARD,
             "borderTop": f"1px solid {BORDER}",
             "position": "fixed",
@@ -574,6 +607,35 @@ def _bubble_agent(name: str, text: str, phase: str) -> html.Div:
     })
 
 
+def _bubble_thinking(name: str, text: str) -> html.Div:
+    """Thinking indicator — shows agent name + what they're doing, like Claude Code."""
+    color = AGENT_COLORS.get(name, MUTED)
+    short = name.split()[0] if name else "?"
+    return html.Div([
+        html.Div(style={"display": "flex", "alignItems": "center", "gap": "10px"}, children=[
+            # Pulsing avatar
+            html.Div(short[0], style={
+                "width": "28px", "height": "28px", "borderRadius": "50%",
+                "backgroundColor": color, "color": BG,
+                "display": "flex", "alignItems": "center", "justifyContent": "center",
+                "fontWeight": "700", "fontSize": "0.75em",
+                "animation": "pulse 1.5s ease-in-out infinite",
+            }),
+            # Thinking text with animated dots
+            html.Span([
+                html.Span(short, style={"color": color, "fontWeight": "600"}),
+                html.Span(f" is ", style={"color": MUTED}),
+                html.Span(text.split("is ")[-1] if "is " in text else "thinking...",
+                          style={"color": MUTED, "fontStyle": "italic"}),
+            ], style={"fontSize": "0.85em"}),
+        ]),
+    ], style={
+        "padding": "10px 16px",
+        "borderLeft": f"2px solid {color}40",
+        "opacity": "0.7",
+    })
+
+
 def _build_chat(messages: list[dict]) -> list:
     """Convert message list to chat bubble components."""
     bubbles = []
@@ -583,7 +645,9 @@ def _build_chat(messages: list[dict]) -> list:
         text = msg.get("text", "")
         phase = msg.get("phase", "")
 
-        if msg_type == "moderator" or speaker == "[K-ZERO]":
+        if msg_type == "thinking":
+            bubbles.append(_bubble_thinking(speaker, text))
+        elif msg_type == "moderator" or speaker == "[K-ZERO]":
             bubbles.append(_bubble_moderator(text))
         elif msg_type == "god_mode" or speaker == "[GOD]":
             bubbles.append(_bubble_god(text))
