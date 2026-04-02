@@ -8,7 +8,10 @@ Deploy: Hugging Face Spaces, Render, Railway
 
 import json
 import os
+import random
 import sys
+import time
+import traceback
 from pathlib import Path
 from typing import Any
 
@@ -203,6 +206,161 @@ def _agent_role(name: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Environment variables for live simulation
+# ---------------------------------------------------------------------------
+
+LLM_API_KEY = os.getenv("LLM_API_KEY", "")
+LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1")
+COUNCIL_MODEL = os.getenv("COUNCIL_MODEL", "llama-3.3-70b-versatile")
+
+PLACEHOLDER_QUESTIONS = [
+    "What would you sacrifice everything for?",
+    "Is consciousness an illusion?",
+    "Should we colonize Mars before fixing Earth?",
+    "Is the pursuit of immortality noble or foolish?",
+    "Can AI ever truly understand human suffering?",
+    "What is more important: freedom or security?",
+    "Is ambition a virtue or a vice?",
+    "Should we fear death or embrace it?",
+]
+
+# For/against keyword lists (from evolution.py _extract_position_local)
+_FOR_KEYWORDS = [
+    "yes", "absolutely", "should", "must", "pursue", "essential",
+    "obviously", "of course", "agree", "support", "beneficial",
+    "necessary", "important", "worth", "embrace", "create",
+    "build", "advance", "progress", "opportunity",
+]
+_AGAINST_KEYWORDS = [
+    "no", "shouldn't", "dangerous", "risk", "wrong", "foolish",
+    "absurd", "meaningless", "pointless", "reject", "oppose",
+    "refuse", "never", "death is", "hubris", "arrogant",
+    "doomed", "failure", "destroy", "irrelevant",
+]
+
+
+def _score_position(text: str) -> float:
+    """Score a response from -1 (against) to +1 (for) using keyword matching."""
+    text_lower = text.lower()
+    for_count = sum(1 for kw in _FOR_KEYWORDS if kw in text_lower)
+    against_count = sum(1 for kw in _AGAINST_KEYWORDS if kw in text_lower)
+    total = for_count + against_count
+    if total > 0:
+        return max(-1.0, min(1.0, (for_count - against_count) / total))
+    return 0.0
+
+
+def _run_mini_council(question: str) -> dict:
+    """Run a mini 3-round, 2-speakers-per-round council simulation.
+
+    Returns dict with 'responses' list and 'error' string (empty on success).
+    """
+    from runner.agent import load_agents, _create_client
+
+    results: dict[str, Any] = {"responses": [], "error": ""}
+
+    try:
+        # Override env for this run
+        original_key = os.environ.get("LLM_API_KEY", "")
+        original_url = os.environ.get("LLM_BASE_URL", "")
+        original_model = os.environ.get("COUNCIL_MODEL", "")
+
+        if LLM_API_KEY:
+            os.environ["LLM_API_KEY"] = LLM_API_KEY
+        if LLM_BASE_URL:
+            os.environ["LLM_BASE_URL"] = LLM_BASE_URL
+        if COUNCIL_MODEL:
+            os.environ["COUNCIL_MODEL"] = COUNCIL_MODEL
+
+        client = _create_client()
+        agents = load_agents(PROJECT_ROOT, client=client)
+
+        # Restore env
+        if original_key:
+            os.environ["LLM_API_KEY"] = original_key
+        if original_url:
+            os.environ["LLM_BASE_URL"] = original_url
+        if original_model:
+            os.environ["COUNCIL_MODEL"] = original_model
+
+        agent_names = list(agents.keys())
+        conversation_history: list[dict[str, Any]] = []
+
+        # Moderator opens
+        opening = {
+            "speaker": "[MODERATOR]",
+            "text": f"Council members, today's question: {question}",
+            "round": 0,
+            "type": "moderator",
+        }
+        conversation_history.append(opening)
+
+        # 3 rounds, 2 speakers per round (6 total responses)
+        num_rounds = 3
+        speakers_per_round = 2
+
+        for round_num in range(1, num_rounds + 1):
+            # Pick 2 random speakers per round (no repeats within a round)
+            available = [n for n in agent_names if n != "Kevin (\uae40\uacbd\uc120)"]
+            speakers = random.sample(available, min(speakers_per_round, len(available)))
+
+            for speaker_name in speakers:
+                agent = agents[speaker_name]
+                try:
+                    response_text = agent.respond(
+                        conversation_history,
+                        current_topic=question,
+                        max_tokens=300,
+                    )
+                    if not response_text or response_text.startswith("["):
+                        continue
+                except Exception as e:
+                    response_text = f"[{speaker_name} could not respond: {e}]"
+                    continue
+
+                entry = {
+                    "speaker": speaker_name,
+                    "text": response_text,
+                    "round": round_num,
+                    "type": "agent",
+                }
+                conversation_history.append(entry)
+                results["responses"].append(entry)
+
+    except Exception as e:
+        results["error"] = f"Simulation failed: {e}\n{traceback.format_exc()}"
+
+    return results
+
+
+def _analyze_responses(responses: list[dict]) -> dict:
+    """Quick keyword-based analysis of simulation responses."""
+    scores: dict[str, float] = {}
+    for r in responses:
+        if r.get("type") != "agent":
+            continue
+        name = r["speaker"]
+        score = _score_position(r["text"])
+        scores[name] = score
+
+    if not scores:
+        return {"verdict": "NO RESPONSES", "scores": {}}
+
+    avg_score = sum(scores.values()) / len(scores)
+    for_count = sum(1 for s in scores.values() if s > 0.1)
+    against_count = sum(1 for s in scores.values() if s < -0.1)
+
+    if abs(avg_score) > 0.3:
+        verdict = "LEANS FOR" if avg_score > 0 else "LEANS AGAINST"
+    elif for_count > 0 and against_count > 0:
+        verdict = "SPLIT"
+    else:
+        verdict = "UNDECIDED"
+
+    return {"verdict": verdict, "scores": scores, "avg_score": round(avg_score, 2)}
+
+
+# ---------------------------------------------------------------------------
 # Build the app
 # ---------------------------------------------------------------------------
 
@@ -210,7 +368,7 @@ def _agent_role(name: str) -> str:
 def build_app() -> Any:
     try:
         import plotly.graph_objects as go
-        from dash import Dash, Input, Output, dcc, html
+        from dash import Dash, Input, Output, State, dcc, html, no_update
     except ImportError as exc:
         raise ImportError("Dash is required: pip install dash plotly") from exc
 
@@ -278,7 +436,101 @@ def build_app() -> Any:
             "zIndex": "1000",
         }),
 
-        # Page content
+        # ---- Ask the Council (interactive simulation) ----
+        html.Div([
+            html.Div([
+                html.H2([
+                    html.Span("Ask ", style={"color": TEXT}),
+                    html.Span("the Council", style={"color": GOLD}),
+                ], style={
+                    "fontSize": "1.8em", "fontWeight": "800",
+                    "margin": "0 0 8px",
+                }),
+                html.P(
+                    "Type a question. 8 minds will debate it.",
+                    style={"color": MUTED, "fontSize": "1em", "margin": "0 0 24px"},
+                ),
+
+                # Input row
+                html.Div([
+                    dcc.Input(
+                        id="question-input",
+                        type="text",
+                        placeholder=random.choice(PLACEHOLDER_QUESTIONS),
+                        style={
+                            "flex": "1",
+                            "padding": "14px 18px",
+                            "fontSize": "1em",
+                            "backgroundColor": "#0d1117",
+                            "color": TEXT,
+                            "border": f"1px solid {BORDER}",
+                            "borderRadius": "8px",
+                            "outline": "none",
+                            "fontFamily": "inherit",
+                        },
+                        debounce=True,
+                    ),
+                    html.Button(
+                        "Ask the Council",
+                        id="run-btn",
+                        n_clicks=0,
+                        style={
+                            "padding": "14px 28px",
+                            "fontSize": "1em",
+                            "fontWeight": "700",
+                            "backgroundColor": GOLD,
+                            "color": BG,
+                            "border": "none",
+                            "borderRadius": "8px",
+                            "cursor": "pointer",
+                            "whiteSpace": "nowrap",
+                            "fontFamily": "inherit",
+                        },
+                    ),
+                ], style={
+                    "display": "flex",
+                    "gap": "12px",
+                    "maxWidth": "700px",
+                    "margin": "0 auto",
+                }),
+
+                # No API key message
+                html.Div(
+                    "API key not configured. View pre-computed analyses below.",
+                    id="no-api-key-msg",
+                    style={
+                        "color": ACCENT_RED,
+                        "fontSize": "0.85em",
+                        "marginTop": "12px",
+                        "display": "none" if LLM_API_KEY else "block",
+                    },
+                ),
+
+                # Status area
+                html.Div(id="sim-status", style={"marginTop": "16px", "textAlign": "center"}),
+
+                # Results area with loading spinner
+                dcc.Loading(
+                    id="sim-loading",
+                    type="dot",
+                    color=GOLD,
+                    children=html.Div(id="sim-results"),
+                ),
+
+                # Hidden stores
+                dcc.Store(id="sim-timestamp", data=0),
+            ], style={
+                "maxWidth": "920px",
+                "margin": "0 auto",
+                "padding": "0 20px",
+            }),
+        ], style={
+            "padding": "48px 0 40px",
+            "borderBottom": f"1px solid {BORDER}",
+            "background": f"linear-gradient(180deg, {CARD} 0%, {BG} 100%)",
+        }),
+
+        # Page content (existing analysis viewer)
         html.Div(id="page-content"),
 
     ], style={
@@ -321,6 +573,159 @@ def build_app() -> Any:
             _build_pipeline_info(html),
             _build_footer(html),
         ], style=PAGE_STYLE)
+
+    # ------------------------------------------------------------------
+    # Callback: "Ask the Council" simulation
+    # ------------------------------------------------------------------
+
+    @app.callback(
+        Output("sim-results", "children"),
+        Output("sim-status", "children"),
+        Output("sim-timestamp", "data"),
+        Input("run-btn", "n_clicks"),
+        State("question-input", "value"),
+        State("sim-timestamp", "data"),
+        prevent_initial_call=True,
+    )
+    def run_council_simulation(n_clicks: int, question: str | None, last_ts: float) -> tuple:
+        if not n_clicks or not question or not question.strip():
+            return no_update, html.Div(
+                "Please type a question first.",
+                style={"color": ACCENT_RED, "fontSize": "0.9em"},
+            ), no_update
+
+        # Rate limiting: 60 second cooldown
+        now = time.time()
+        if last_ts and (now - last_ts) < 60:
+            remaining = int(60 - (now - last_ts))
+            return no_update, html.Div(
+                f"The Council needs time to deliberate. Try again in {remaining} seconds.",
+                style={"color": GOLD, "fontSize": "0.9em"},
+            ), no_update
+
+        # Check API key
+        if not LLM_API_KEY:
+            return no_update, html.Div(
+                "API key not configured. Set LLM_API_KEY environment variable.",
+                style={"color": ACCENT_RED, "fontSize": "0.9em"},
+            ), no_update
+
+        # Run simulation
+        result = _run_mini_council(question.strip())
+
+        if result["error"]:
+            return html.Div(), html.Div(
+                f"Error: {result['error'][:200]}",
+                style={"color": ACCENT_RED, "fontSize": "0.85em", "whiteSpace": "pre-wrap"},
+            ), now
+
+        responses = result["responses"]
+        if not responses:
+            return html.Div(), html.Div(
+                "The Council could not generate responses. Check your API key and try again.",
+                style={"color": ACCENT_RED, "fontSize": "0.9em"},
+            ), now
+
+        # Build response cards
+        cards: list[Any] = []
+        for resp in responses:
+            speaker = resp["speaker"]
+            text = _clean_truncated_text(resp["text"])
+            round_num = resp["round"]
+            color = _agent_color(speaker)
+            role = _agent_role(speaker)
+
+            cards.append(html.Div([
+                # Header: name + role + round badge
+                html.Div([
+                    html.Span(speaker, style={
+                        "color": color, "fontWeight": "700", "fontSize": "1.05em",
+                    }),
+                    html.Span(f"  \u00b7  {role}", style={
+                        "color": MUTED, "fontSize": "0.82em",
+                    }),
+                    html.Span(f"R{round_num}", style={
+                        "color": MUTED, "fontSize": "0.72em",
+                        "backgroundColor": "#0d1117",
+                        "padding": "2px 8px", "borderRadius": "4px",
+                        "marginLeft": "auto",
+                    }),
+                ], style={
+                    "display": "flex", "alignItems": "center",
+                    "gap": "8px", "marginBottom": "10px",
+                }),
+                # Response text
+                html.P(text, style={
+                    "color": TEXT, "fontSize": "0.92em",
+                    "lineHeight": "1.65", "margin": "0",
+                    "whiteSpace": "pre-wrap",
+                }),
+            ], style={
+                **_card_style(),
+                "borderLeft": f"3px solid {color}",
+                "marginBottom": "12px",
+            }))
+
+        # Quick analysis
+        analysis = _analyze_responses(responses)
+        verdict = analysis["verdict"]
+        scores = analysis.get("scores", {})
+
+        verdict_color = (
+            ACCENT_GREEN if "FOR" in verdict
+            else ACCENT_RED if "AGAINST" in verdict
+            else GOLD
+        )
+
+        # Score pills for each agent
+        score_pills: list[Any] = []
+        for name, score in sorted(scores.items(), key=lambda x: x[1], reverse=True):
+            pill_color = ACCENT_GREEN if score > 0.1 else ACCENT_RED if score < -0.1 else MUTED
+            score_pills.append(html.Span(
+                f"{name.split()[0]}: {score:+.1f}",
+                style={
+                    "color": pill_color,
+                    "fontSize": "0.8em",
+                    "padding": "3px 10px",
+                    "border": f"1px solid {pill_color}",
+                    "borderRadius": "12px",
+                    "display": "inline-block",
+                    "marginRight": "6px",
+                    "marginBottom": "6px",
+                },
+            ))
+
+        # Verdict card
+        verdict_card = html.Div([
+            html.Div([
+                html.Span("VERDICT: ", style={
+                    "color": MUTED, "fontSize": "0.8em",
+                    "textTransform": "uppercase", "letterSpacing": "0.08em",
+                }),
+                html.Span(f"The Council {verdict}", style={
+                    "color": verdict_color, "fontWeight": "700",
+                    "fontSize": "1.2em",
+                }),
+            ], style={"marginBottom": "12px"}),
+            html.Div(score_pills),
+        ], style={
+            **_card_style(),
+            "borderTop": f"3px solid {verdict_color}",
+            "marginBottom": "24px",
+            "textAlign": "center",
+        })
+
+        return html.Div([
+            verdict_card,
+            html.H3("Agent Responses", style={
+                "color": TEXT, "fontSize": "1.1em",
+                "fontWeight": "600", "marginBottom": "16px",
+            }),
+            *cards,
+        ], style={"marginTop": "24px", "maxWidth": "700px", "margin": "24px auto 0"}), html.Div(
+            f"Simulation complete \u2014 {len(responses)} responses across 3 rounds.",
+            style={"color": ACCENT_GREEN, "fontSize": "0.9em"},
+        ), now
 
     return app
 
