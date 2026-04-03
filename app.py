@@ -410,7 +410,8 @@ def _make_layout() -> html.Div:
                 id="question-input",
                 type="text",
                 placeholder=random.choice(PLACEHOLDER_QUESTIONS),
-                debounce=False,
+                debounce=True,
+                n_submit=0,
                 style={
                     "flex": "1",
                     "padding": "16px 20px",
@@ -668,15 +669,16 @@ def _build_chat(messages: list[dict]) -> list:
     Output("sim-timestamp", "data"),
     Output("sim-poll", "disabled"),
     Input("send-btn", "n_clicks"),
+    Input("question-input", "n_submit"),
     State("question-input", "value"),
     State("step-dropdown", "value"),
     State("sim-timestamp", "data"),
     prevent_initial_call=True,
 )
-def start_simulation(n_clicks, question, n_steps, last_ts):
+def start_simulation(n_clicks, n_submit, question, n_steps, last_ts):
     global _sim_running, _sim_done, _sim_stop
     try:
-        if not n_clicks or not question or not question.strip():
+        if (not n_clicks and not n_submit) or not question or not question.strip():
             return no_update, no_update, no_update
 
         # Rate limit: 30s cooldown
