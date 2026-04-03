@@ -147,6 +147,7 @@ def _run_council(question: str, n_steps: int = 3) -> None:
 
         def _agent_speak(name: str, topic: str, rnd: int,
                          phase: str = "", max_tok: int = 100) -> None:
+            global _sim_stop
             if _sim_stop or (time.time() - _sim_start_time > _SIM_TIMEOUT):
                 _sim_stop = True
                 return
