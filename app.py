@@ -700,8 +700,9 @@ def start_simulation(n_clicks, n_submit, question, n_steps, last_ts):
         if _sim_running:
             _sim_stop = True
             _sim_running = False
-            _sim_done = True
-            time.sleep(1)
+            _sim_done = False
+            _sim_messages.clear()
+            time.sleep(2)  # Give old thread time to die
 
         if not LLM_API_KEY:
             return (
@@ -836,10 +837,12 @@ from flask import redirect
 
 @app.server.route("/stop")
 def stop_and_redirect():
-    global _sim_stop, _sim_running, _sim_done
+    global _sim_stop, _sim_running, _sim_done, _sim_messages
     _sim_stop = True
     _sim_running = False
-    _sim_done = True
+    _sim_done = False  # False so the poll callback doesn't show old results
+    _sim_messages = []  # Clear old messages
+    time.sleep(1)  # Give thread time to see _sim_stop
     return redirect("/")
 
 

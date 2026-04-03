@@ -188,21 +188,66 @@ def main():
     os.chdir(str(app_dir))
 
     # Open browser after a short delay
+    import threading
+
     def open_browser():
         time.sleep(3)
         webbrowser.open(f"http://localhost:{APP_PORT}")
         _print(f"Browser opened: http://localhost:{APP_PORT}")
 
-    import threading
     threading.Thread(target=open_browser, daemon=True).start()
 
-    _print("K-ZERO is running. Close this window to stop.")
+    _print("K-ZERO is running. Press Ctrl+C or close this window to stop.")
     _print(f"Open http://localhost:{APP_PORT} in your browser.")
     print()
 
-    # Import and run the Dash app
-    from app import app as dash_app
-    dash_app.run(host="0.0.0.0", port=APP_PORT, debug=False)
+    # Import and run the Dash app with proper cleanup on exit
+    import signal
+    import atexit
+
+    def _cleanup():
+        """Kill all child threads and simulation on exit."""
+        _print("Shutting down...")
+        try:
+            import app as app_module
+            app_module._sim_stop = True
+            app_module._sim_running = False
+            app_module._sim_done = True
+        except Exception:
+            pass
+        # Force kill any remaining threads
+        os._exit(0)
+
+    atexit.register(_cleanup)
+    signal.signal(signal.SIGINT, lambda s, f: _cleanup())
+    signal.signal(signal.SIGTERM, lambda s, f: _cleanup())
+
+    # On Windows, also handle console close
+    if platform.system() == "Windows":
+        try:
+            import ctypes
+            kernel32 = ctypes.windll.kernel32
+
+            def _console_handler(event):
+                if event in (0, 2, 5, 6):  # CTRL_C, CTRL_CLOSE, CTRL_LOGOFF, CTRL_SHUTDOWN
+                    _cleanup()
+                    return True
+                return False
+
+            handler_type = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_ulong)
+            kernel32.SetConsoleCtrlHandler(handler_type(_console_handler), True)
+        except Exception:
+            pass
+
+    try:
+        from app import app as dash_app
+        dash_app.run(host="0.0.0.0", port=APP_PORT, debug=False)
+    except (KeyboardInterrupt, SystemExit):
+        _cleanup()
+    except Exception as e:
+        _print(f"App error: {e}")
+        input("Press Enter to exit...")
+        _cleanup()
 
 
 if __name__ == "__main__":
