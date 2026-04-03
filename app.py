@@ -84,6 +84,8 @@ _sim_messages: list[dict[str, Any]] = []
 _sim_running: bool = False
 _sim_done: bool = False
 _sim_stop: bool = False
+_sim_start_time: float = 0
+_SIM_TIMEOUT = 300  # Kill simulation after 5 minutes max
 
 # ---------------------------------------------------------------------------
 # Background thread: multi-step Hegelian dialectic
@@ -100,11 +102,12 @@ GOD_TWISTS = [
 
 def _run_council(question: str, n_steps: int = 3) -> None:
     """Run multi-step evolving deliberation. Appends messages to _sim_messages."""
-    global _sim_messages, _sim_running, _sim_done, _sim_stop
+    global _sim_messages, _sim_running, _sim_done, _sim_stop, _sim_start_time
     _sim_messages = []
     _sim_running = True
     _sim_done = False
     _sim_stop = False
+    _sim_start_time = time.time()
 
     try:
         from runner.agent import _create_client, _rotate_client, load_agents
@@ -144,7 +147,8 @@ def _run_council(question: str, n_steps: int = 3) -> None:
 
         def _agent_speak(name: str, topic: str, rnd: int,
                          phase: str = "", max_tok: int = 100) -> None:
-            if _sim_stop:
+            if _sim_stop or (time.time() - _sim_start_time > _SIM_TIMEOUT):
+                _sim_stop = True
                 return
             agent = agents[name]
             short = name.split()[0]
@@ -439,9 +443,9 @@ def _make_layout() -> html.Div:
                     "justifyContent": "center",
                 },
             ),
-            # Stop / New Question (plain link, avoids Dash button serialization bug)
+            # Stop / New Question — hits /stop endpoint then reloads
             html.A(
-                "\u21bb New", href="/",
+                "\u21bb New", href="/stop",
                 style={
                     "color": RED, "fontSize": "0.8em", "fontWeight": "700",
                     "textDecoration": "none", "padding": "8px 10px",
@@ -819,6 +823,25 @@ app.index_string = """<!DOCTYPE html>
 # ---------------------------------------------------------------------------
 # Run
 # ---------------------------------------------------------------------------
+# Flask route: /stop — kills simulation and redirects to /
+# ---------------------------------------------------------------------------
+
+from flask import redirect
+
+@app.server.route("/stop")
+def stop_and_redirect():
+    global _sim_stop, _sim_running, _sim_done
+    _sim_stop = True
+    _sim_running = False
+    _sim_done = True
+    return redirect("/")
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+server = app.server  # For WSGI deployment
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=7860, debug=False)
