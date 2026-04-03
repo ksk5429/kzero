@@ -674,6 +674,7 @@ def _build_chat(messages: list[dict]) -> list:
     prevent_initial_call=True,
 )
 def start_simulation(n_clicks, question, n_steps, last_ts):
+    global _sim_running, _sim_done, _sim_stop
     try:
         if not n_clicks or not question or not question.strip():
             return no_update, no_update, no_update
@@ -683,13 +684,17 @@ def start_simulation(n_clicks, question, n_steps, last_ts):
         if last_ts and (now - last_ts) < 30:
             return f"Wait {int(30 - (now - last_ts))}s...", no_update, True
 
+        # Force reset if stuck from previous run
         if _sim_running:
-            return "Simulation already running.", no_update, no_update
+            _sim_stop = True
+            _sim_running = False
+            _sim_done = True
+            time.sleep(1)
 
         if not LLM_API_KEY:
             return (
-                f"No API key configured. Set LLM_API_KEY as HF Space secret. "
-                f"(BASE_URL={LLM_BASE_URL}, MODEL={COUNCIL_MODEL})",
+                f"No API key. Set LLM_API_KEY as HF Space secret. "
+                f"(URL={LLM_BASE_URL}, MODEL={COUNCIL_MODEL})",
                 no_update, True,
             )
 
