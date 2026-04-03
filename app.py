@@ -162,28 +162,33 @@ def _run_council(question: str, n_steps: int = 3) -> None:
             phase_key = phase.split()[-1] if phase else ""
             thinking_desc = thinking_prompts.get(phase_key, "thinking")
 
-            # Show thinking indicator
+            # Show thinking indicator (minimum 3s visible for polling to catch it)
             thinking_entry = {
                 "speaker": name, "text": f"{short} is {thinking_desc}...",
                 "round": rnd, "type": "thinking", "phase": phase,
             }
             _sim_messages.append(thinking_entry)
+            think_start = time.time()
 
             for attempt in range(4):
                 try:
                     text = agent.respond(
                         history, current_topic=topic, max_tokens=max_tok)
 
-                    # Remove thinking indicator
+                    # Ensure thinking was visible for at least 3 seconds
+                    elapsed = time.time() - think_start
+                    if elapsed < 3:
+                        time.sleep(3 - elapsed)
+
+                    # Replace thinking with actual response
                     if thinking_entry in _sim_messages:
                         _sim_messages.remove(thinking_entry)
 
                     if text and not text.startswith("["):
                         _add(name, text, rnd, "agent", phase)
-                        time.sleep(2)
+                        time.sleep(1)
                         return
                 except Exception as e:
-                    # Remove thinking indicator on error too
                     if thinking_entry in _sim_messages:
                         _sim_messages.remove(thinking_entry)
 
@@ -196,8 +201,8 @@ def _run_council(question: str, n_steps: int = 3) -> None:
                             "round": rnd, "type": "system", "phase": "",
                         })
                         time.sleep(wait)
-                        # Re-add thinking indicator for retry
                         _sim_messages.append(thinking_entry)
+                        think_start = time.time()
                         try:
                             agent.client = _rotate_client()
                         except Exception:
