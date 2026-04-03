@@ -42,9 +42,10 @@ short_description: 8 minds. 1 question. Infinite consequences.
 
 | Method | Link | What You Get |
 |--------|------|-------------|
-| **Live Demo** | [kyeongsun-kzero.hf.space](https://huggingface.co/spaces/kyeongsun/kzero) | Interactive dashboard, zero setup |
-| **Kaggle** | [Open in Kaggle](https://kaggle.com/) | Full simulation in your browser |
-| **Local** | See Quick Start below | All 3 modes + full pipeline + god-mode |
+| **Windows .exe** | [Download kzero.exe](https://github.com/ksk5429/kzero/releases/latest) | Double-click to run. Auto-installs Ollama + model. No setup needed. |
+| **Live Demo** | [kyeongsun-kzero.hf.space](https://huggingface.co/spaces/kyeongsun/kzero) | Chat with the Council in your browser. Zero install. |
+| **Local (pip)** | See Quick Start below | Full K-ZERO Console + Hegelian dialectic + overnight batch runs |
+| **Kaggle** | [Open in Kaggle](https://kaggle.com/) | Run simulations in Kaggle notebook |
 
 ---
 
