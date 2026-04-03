@@ -670,27 +670,40 @@ def _build_chat(messages: list[dict]) -> list:
     Input("send-btn", "n_clicks"),
     State("question-input", "value"),
     State("step-dropdown", "value"),
+    State("sim-timestamp", "data"),
     prevent_initial_call=True,
 )
-def start_simulation(n_clicks, question, n_steps):
-    if not n_clicks or not question or not question.strip():
-        return no_update, no_update, no_update
+def start_simulation(n_clicks, question, n_steps, last_ts):
+    try:
+        if not n_clicks or not question or not question.strip():
+            return no_update, no_update, no_update
 
-    if _sim_running:
-        return "Simulation already running.", no_update, no_update
+        # Rate limit: 30s cooldown
+        now = time.time()
+        if last_ts and (now - last_ts) < 30:
+            return f"Wait {int(30 - (now - last_ts))}s...", no_update, True
 
-    if not LLM_API_KEY:
-        return "No API key. Set LLM_API_KEY.", no_update, True
+        if _sim_running:
+            return "Simulation already running.", no_update, no_update
 
-    n_steps = n_steps or 3
-    t = threading.Thread(
-        target=_run_council,
-        args=(question.strip(), n_steps),
-        daemon=True,
-    )
-    t.start()
+        if not LLM_API_KEY:
+            return (
+                f"No API key configured. Set LLM_API_KEY as HF Space secret. "
+                f"(BASE_URL={LLM_BASE_URL}, MODEL={COUNCIL_MODEL})",
+                no_update, True,
+            )
 
-    return "Council convened...", time.time(), False
+        n_steps = n_steps or 3
+        t = threading.Thread(
+            target=_run_council,
+            args=(question.strip(), n_steps),
+            daemon=True,
+        )
+        t.start()
+
+        return "Council convened...", time.time(), False
+    except Exception as e:
+        return f"Error: {e}", no_update, True
 
 
 # ---------------------------------------------------------------------------
